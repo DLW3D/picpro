@@ -167,11 +167,11 @@ def ReadFile(path, rate=10, shape=(100,100,3)):
             val_label.append(raw_train[i][0])
         else:
             x_train.append(tmp)
-            x_train.append(np.flip(tmp, axis=2))  # simple example of data augmentation
             x_label.append(raw_train[i][0])
-            x_label.append(raw_train[i][0])
-    x_train = np.array(x_train, dtype=float) / 255.0
-    val_data = np.array(val_data, dtype=float) / 255.0
+            # x_train.append(np.flip(tmp, axis=2))  # simple example of data augmentation
+            # x_label.append(raw_train[i][0])
+    x_train = np.array(x_train, dtype=float)
+    val_data = np.array(val_data, dtype=float)
     x_label = np.array(x_label, dtype=int)
     val_label = np.array(val_label, dtype=int)
     return x_train, x_label, val_data, val_label
@@ -180,7 +180,7 @@ def ReadFile(path, rate=10, shape=(100,100,3)):
 # 使用模型判断图片*********
 def Tester(model, path):
     tester = np.array(Scale(ArrayToImage(ReadImageToArray(path)), 100, 100)).reshape(1, 100, 100, 3) / 255
-    print(model.predict(tester))
+    return model.predict(tester)
 
 
 # Tester(model, 1, r'C:\Users\78753\Desktop\1.png')
