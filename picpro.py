@@ -36,6 +36,8 @@ def ReadImageToArray(filename, usefilter=True):
 def ArrayToImage(data):
     if data is None:
         return None
+    if data.shape[-1] == 1:
+        data.shape = data.shape[0:-1]
     new_im = Image.fromarray(data.astype(np.uint8))
     return new_im
 
@@ -179,6 +181,12 @@ def ReadFile(path, rate=10, shape=(100,100,3)):
 
 # 使用模型判断图片*********
 def Tester(model, path):
-    tester = np.array(Scale(ArrayToImage(ReadImageToArray(path)), 100, 100)).reshape(1, 100, 100, 3) / 255
+    tester = np.array(Scale(ArrayToImage(ReadImageToArray(path)), 100, 100)).reshape(1, 100, 100, 3)
     return model.predict(tester)
 
+# 检查测试数据分布情况
+def CheckLabel(y_train):
+    count = np.zeros(y_train.shape[1], dtype=int)
+    for i in y_train.argmax(axis=-1):
+        count[i] += 1
+    return count

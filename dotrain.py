@@ -58,7 +58,7 @@ print(x_train.shape[0], 'train samples')
 print(x_val.shape[0], 'val samples')
 
 # 测试
-# picpro.ArrayToImage(x_train[0]*255).show()
+# picpro.ArrayToImage(x_train[0]).show()
 
 
 print("正在构建模型...")
