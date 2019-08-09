@@ -153,7 +153,7 @@ def FileToCSV(label, dir, path, width=0, height=0):
 
 
 # 读取CSV
-def ReadFile(path, shape=(100,100,3)):
+def ReadFile(path, rate=10, shape=(100,100,3)):
     print("正在读取CSV文件...")
     x_train = []
     x_label = []
@@ -162,7 +162,7 @@ def ReadFile(path, shape=(100,100,3)):
     raw_train = np.genfromtxt(path, delimiter=',', dtype=str, skip_header=1)
     for i in range(len(raw_train)):
         tmp = np.array(raw_train[i, 1].split(' ')).reshape(shape)
-        if (i % 5 == 0):
+        if (i % rate == 0):
             val_data.append(tmp)
             val_label.append(raw_train[i][0])
         else:
@@ -178,9 +178,9 @@ def ReadFile(path, shape=(100,100,3)):
 
 
 # 使用模型判断图片*********
-def Tester(model, label, path):
+def Tester(model, path):
     tester = np.array(Scale(ArrayToImage(ReadImageToArray(path)), 100, 100)).reshape(1, 100, 100, 3) / 255
-    print(model.evaluate(tester, keras.utils.to_categorical(label, 2).reshape(1, 2)))
+    print(model.predict(tester))
 
 
 # Tester(model, 1, r'C:\Users\78753\Desktop\1.png')
