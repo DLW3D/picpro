@@ -69,8 +69,8 @@ model.add(Conv2D(filters=64, kernel_size=(3, 3), padding='same',
                  kernel_initializer='glorot_normal'))   # 卷积
 model.add(LeakyReLU())  # 激活
 model.add(BatchNormalization())     # 批量规范化层
-model.add(MaxPooling2D(pool_size=(2, 2), padding='same'))   # 卷积
-model.add(Dropout(rate=drop_rate, seed=myseed))     # 池化
+model.add(MaxPooling2D(pool_size=(2, 2), padding='same'))   # 池化
+model.add(Dropout(rate=drop_rate, seed=myseed))     # Dropout
 
 model.add(Conv2D(filters=64, kernel_size=(3, 3), padding='same', kernel_initializer='glorot_normal'))
 model.add(LeakyReLU())
