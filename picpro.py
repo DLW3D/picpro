@@ -156,25 +156,25 @@ def FileToCSV(label, dir, path, width=0, height=0):
 def ReadFile(path, rate=10, shape=(100,100,3)):
     print("正在读取CSV文件...")
     x_train = []
-    x_label = []
-    val_data = []
-    val_label = []
+    y_train = []
+    x_val = []
+    y_val = []
     raw_train = np.genfromtxt(path, delimiter=',', dtype=str, skip_header=1)
     for i in range(len(raw_train)):
         tmp = np.array(raw_train[i, 1].split(' ')).reshape(shape)
         if (i % rate == 0):
-            val_data.append(tmp)
-            val_label.append(raw_train[i][0])
+            x_val.append(tmp)
+            y_val.append(raw_train[i][0])
         else:
             x_train.append(tmp)
-            x_label.append(raw_train[i][0])
+            y_train.append(raw_train[i][0])
             # x_train.append(np.flip(tmp, axis=2))  # simple example of data augmentation
-            # x_label.append(raw_train[i][0])
+            # y_train.append(raw_train[i][0])
     x_train = np.array(x_train, dtype=float)
-    val_data = np.array(val_data, dtype=float)
-    x_label = np.array(x_label, dtype=int)
-    val_label = np.array(val_label, dtype=int)
-    return x_train, x_label, val_data, val_label
+    x_val = np.array(x_val, dtype=float)
+    y_train = np.array(y_train, dtype=int)
+    y_val = np.array(y_val, dtype=int)
+    return x_train, y_train, x_val, y_val
 
 
 # 使用模型判断图片*********
@@ -182,26 +182,3 @@ def Tester(model, path):
     tester = np.array(Scale(ArrayToImage(ReadImageToArray(path)), 100, 100)).reshape(1, 100, 100, 3) / 255
     return model.predict(tester)
 
-
-# Tester(model, 1, r'C:\Users\78753\Desktop\1.png')
-# ArrayToImage(x_train[0]*255+np.random.rand(100,100,3)*10).show()
-
-# a,b,c,d = ReadFile('C:\\Users\\78753\\Desktop\\舰R\\1.csv')
-
-# data = ReadDatas("C:\\Users\\78753\\Desktop\\舰R\\tar")
-# SaveFile(1,data,"C:\\Users\\78753\\Desktop\\舰R\\1.csv")
-
-# a = ReadDatas('C:\\Users\\78753\\Desktop\\舰R\\其他')
-# print(a)
-
-# filename = '..\\舰R\\sum\\199 絮库夫的水上乐园.png'
-# data = ReadImageToArray(filename)
-# # print(data)
-# new_im = ArrayToImage(data)
-# # plt.imshow(data, cmap=plt.cm.gray, interpolation='nearest')
-# new_im.resize((500, 500), Image.ANTIALIAS)
-# new_im.show()
-# new_im.save('lena_1.png')
-
-# ArrayToImage(ReadImageToArray('..\\舰R\\sum\\011 圣诞服.PNG')).show()
-# Scale(Image.open('akasita_2-pic.png'),100,100).paste((20,20,80,80)).show()

@@ -1,5 +1,6 @@
 # !/usr/bin/python
 # -*- coding:utf8 -*-
+import itertools
 import random
 
 import numpy as np
@@ -12,6 +13,7 @@ from keras.layers import Dense, Dropout, Flatten, Conv2D, MaxPooling2D, BatchNor
 from keras import callbacks
 from keras_preprocessing.image import ImageDataGenerator
 import matplotlib.pyplot as plt
+from sklearn.metrics import confusion_matrix
 
 import picpro
 
@@ -21,20 +23,20 @@ epochs = 100
 
 input_shape = (48, 48, 1)
 
-# x0_train, y0_train, x0_test, y0_test = picpro.ReadFile(r'0.csv', input_shape)
-# x1_train, y1_train, x1_test, y1_test = picpro.ReadFile(r'1.csv', input_shape)
+# x0_train, y0_train, x0_val, y0_val = picpro.ReadFile(r'0.csv', input_shape)
+# x1_train, y1_train, x1_val, y1_val = picpro.ReadFile(r'1.csv', input_shape)
 
 
 print('正在处理训练集...')
 # 合成训练集
 # x_train = np.concatenate([x1_train, x0_train], 0)
 # y_train = np.concatenate([y1_train, y0_train], 0)
-# x_test = np.concatenate([x1_test, x0_test], 0)
-# y_test = np.concatenate([y1_test, y0_test], 0)
-# del x0_train, y0_train, x0_test, y0_test
-# del x1_train, y1_train, x1_test, y1_test
+# x_val = np.concatenate([x1_val, x0_val], 0)
+# y_val = np.concatenate([y1_val, y0_val], 0)
+# del x0_train, y0_train, x0_val, y0_val
+# del x1_train, y1_train, x1_val, y1_val
 
-x_train, y_train, x_test, y_test = picpro.ReadFile(r'train.csv', 10, input_shape)
+x_train, y_train, x_val, y_val = picpro.ReadFile(r'train.csv', 10, input_shape)
 
 # 打乱训练集
 index = [i for i in range(len(y_train))]
@@ -44,16 +46,16 @@ y_train = y_train[index]
 # 添加噪声
 # for i in x_train:
 #     i += np.random.rand(input_shape)/25
-# for i in x_test:
+# for i in x_val:
 #     i += np.random.rand(input_shape)/25
 # 将类向量转换为二进制类矩阵(one-hot)
 y_train = keras.utils.to_categorical(y_train, num_classes)
-y_test = keras.utils.to_categorical(y_test, num_classes)
+y_val = keras.utils.to_categorical(y_val, num_classes)
 
 print('x_train shape:', x_train.shape)
 print('y_train shape:', y_train.shape)
 print(x_train.shape[0], 'train samples')
-print(x_test.shape[0], 'test samples')
+print(x_val.shape[0], 'val samples')
 
 # 测试
 # picpro.ArrayToImage(x_train[0]*255).show()
@@ -65,26 +67,26 @@ drop_rate = 0.25
 # 构建模型
 model = Sequential()
 model.add(BatchNormalization(input_shape=input_shape))  # 批量规范化层(不用手动规范化数据了)
-model.add(Conv2D(filters=64, kernel_size=(3, 3), padding='same',
+model.add(Conv2D(filters=128, kernel_size=(3, 3), padding='same',
                  kernel_initializer='glorot_normal'))   # 卷积
 model.add(LeakyReLU())  # 激活
 model.add(BatchNormalization())     # 批量规范化层
 model.add(MaxPooling2D(pool_size=(2, 2), padding='same'))   # 池化
 model.add(Dropout(rate=drop_rate, seed=myseed))     # Dropout
 
-model.add(Conv2D(filters=64, kernel_size=(3, 3), padding='same', kernel_initializer='glorot_normal'))
-model.add(LeakyReLU())
-model.add(BatchNormalization())
-model.add(MaxPooling2D(pool_size=(2, 2), padding='same'))
-model.add(Dropout(rate=drop_rate, seed=myseed))
-
 model.add(Conv2D(filters=128, kernel_size=(3, 3), padding='same', kernel_initializer='glorot_normal'))
 model.add(LeakyReLU())
 model.add(BatchNormalization())
 model.add(MaxPooling2D(pool_size=(2, 2), padding='same'))
 model.add(Dropout(rate=drop_rate, seed=myseed))
 
-model.add(Conv2D(filters=128, kernel_size=(3, 3), padding='same', kernel_initializer='glorot_normal'))
+model.add(Conv2D(filters=256, kernel_size=(6, 6), padding='same', kernel_initializer='glorot_normal'))
+model.add(LeakyReLU())
+model.add(BatchNormalization())
+model.add(MaxPooling2D(pool_size=(2, 2), padding='same'))
+model.add(Dropout(rate=drop_rate, seed=myseed))
+
+model.add(Conv2D(filters=256, kernel_size=(6, 6), padding='same', kernel_initializer='glorot_normal'))
 model.add(LeakyReLU())
 model.add(BatchNormalization())
 model.add(MaxPooling2D(pool_size=(2, 2), padding='same'))
@@ -105,7 +107,7 @@ model.add(Dropout(rate=drop_rate, seed=myseed))
 model.add(Dense(units=7, activation='softmax', kernel_initializer='glorot_normal'))
 # compile the model 编译模型
 model.compile(loss=keras.losses.categorical_crossentropy,
-              optimizer=keras.optimizers.Nadam(),
+              optimizer=keras.optimizers.adamax(),
               metrics=['accuracy'])
 # 显示模型
 model.summary()
@@ -131,7 +133,7 @@ generate = ImageDataGenerator(rotation_range=30, width_shift_range=0.2, height_s
                               shear_range=0.2, horizontal_flip=True)
 generate.fit(x_train)
 history = model.fit_generator(generate.flow(x_train, y_train, batch_size=batch_size),
-                              validation_data=(x_test, y_test),
+                              validation_data=(x_val, y_val),
                               steps_per_epoch=int(len(x_train) / batch_size),
                               epochs=epochs,
                               verbose=1,
@@ -143,11 +145,11 @@ history = model.fit_generator(generate.flow(x_train, y_train, batch_size=batch_s
 #                     epochs=epochs,
 #                     verbose=1,
 #                     callbacks=cbks,
-#                     validation_data=(x_test, y_test))
+#                     validation_data=(x_val, y_val))
 
 
-# test the model 测试模型
-score = model.evaluate(x_test, y_test, verbose=0)
+# val the model 测试模型
+score = model.evaluate(x_val, y_val, verbose=0)
 print('Test loss:', score[0])
 print('Test accuracy:', score[1])
 
@@ -170,11 +172,44 @@ def show_train_history(train_history, train_metrics, validation_metrics):
     plt.xlabel('Epoch')
     plt.legend(['train', 'validation'], loc='upper left')
 
-
-def plot(history):
+# 显示训练过程
+def plot(history=history):
     plt.figure(figsize=(12, 4))
     plt.subplot(1, 2, 1)
     show_train_history(history, 'acc', 'val_acc')
     plt.subplot(1, 2, 2)
     show_train_history(history, 'loss', 'val_loss')
     plt.show()
+
+
+def plot_confusion_matrix(cm, classes,
+                          title='Confusion matrix',
+                          cmap=plt.cm.jet):
+    """
+    This function prints and plots the confusion matrix.
+    """
+    cm = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
+    plt.imshow(cm, interpolation='nearest', cmap=cmap)
+    plt.title(title)
+    plt.colorbar()
+    tick_marks = np.arange(len(classes))
+    plt.xticks(tick_marks, classes, rotation=45)
+    plt.yticks(tick_marks, classes)
+    thresh = cm.max() / 2.
+    for i, j in itertools.product(range(cm.shape[0]), range(cm.shape[1])):
+        plt.text(j, i, '{:.2f}'.format(cm[i, j]), horizontalalignment="center",
+                 color="white" if cm[i, j] > thresh else "black")
+    plt.tight_layout()
+    plt.ylabel('True label')
+    plt.xlabel('Predicted label')
+    plt.savefig('confusion_matrix.png')
+    plt.show()
+
+# 显示混淆矩阵
+def plot_confuse(model=model):
+    predictions = model.predict_classes(x_val)
+    conf_mat = confusion_matrix(y_true=y_val.argmax(axis=-1), y_pred=predictions)
+    plt.figure()
+    plot_confusion_matrix(conf_mat, [])
+
+
