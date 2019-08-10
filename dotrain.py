@@ -39,10 +39,10 @@ print('正在处理训练集...')
 x_train, y_train, x_val, y_val = picpro.ReadFile(r'train.csv', 10, input_shape)
 
 # 打乱训练集
-index = [i for i in range(len(y_train))]
-random.shuffle(index)
-x_train = x_train[index]
-y_train = y_train[index]
+# index = [i for i in range(len(y_train))]
+# random.shuffle(index)
+# x_train = x_train[index]
+# y_train = y_train[index]
 # 添加噪声
 # for i in x_train:
 #     i += np.random.rand(input_shape)/25
@@ -62,13 +62,29 @@ print(x_val.shape[0], 'val samples')
 
 
 print("正在构建模型...")
+# 设置 Call Back
+# TensorBoard 运行 tensorboard --logdir="C:\Users\78753\Desktop\DL\picpro\logs" 访问 http://localhost:6006/ 查看
+tb_config = keras.callbacks.TensorBoard(
+    log_dir=r'.\logs',
+    write_graph=True,
+    write_images=True,
+    histogram_freq=1)
+early_stopping = callbacks.EarlyStopping(patience=20, mode='auto', verbose=1)
+lrate = ReduceLROnPlateau(monitor='val_loss', factor=0.1, patience=4, verbose=1, mode='auto', epsilon=0.0001, cooldown=0,
+                          min_lr=0.00001)
+checkpoint = ModelCheckpoint(filepath='save.h5', monitor='val_acc', verbose=1, save_best_only=True,
+                             save_weights_only=False, mode='auto', period=1)
+earlystopping = EarlyStopping(monitor='val_acc', patience=20, verbose=1, mode='auto')
+csvlogger = CSVLogger('log_save.csv', append=False)
+cbks = [lrate, earlystopping, tb_config]  # , checkpoint, csvlogger]
+
+
+# 构建模型
 myseed = 10
 drop_rate = 0.25
-# 构建模型
 model = Sequential()
 model.add(BatchNormalization(input_shape=input_shape))  # 批量规范化层(不用手动规范化数据了)
-model.add(Conv2D(filters=128, kernel_size=(3, 3), padding='same',
-                 kernel_initializer='glorot_normal'))   # 卷积
+model.add(Conv2D(filters=128, kernel_size=(3, 3), padding='same', kernel_initializer='glorot_normal'))   # 卷积
 model.add(LeakyReLU())  # 激活
 model.add(BatchNormalization())     # 批量规范化层
 model.add(MaxPooling2D(pool_size=(2, 2), padding='same'))   # 池化
@@ -112,21 +128,6 @@ model.compile(loss=keras.losses.categorical_crossentropy,
 # 显示模型
 model.summary()
 
-# Call Back
-# TensorBoard 运行 tensorboard --logdir="C:\Users\78753\Desktop\DL\picpro\logs" 访问 http://localhost:6006/ 查看
-tb_config = keras.callbacks.TensorBoard(
-    log_dir=r'.\logs',
-    write_graph=True,
-    write_images=True,
-    histogram_freq=1)
-early_stopping = callbacks.EarlyStopping(patience=20, mode='auto', verbose=1)
-lrate = ReduceLROnPlateau(monitor='val_acc', factor=0.1, patience=4, verbose=1, mode='auto', epsilon=0.0001, cooldown=0,
-                          min_lr=0.00001)
-checkpoint = ModelCheckpoint(filepath='save.h5', monitor='val_acc', verbose=1, save_best_only=True,
-                             save_weights_only=False, mode='auto', period=1)
-earlystopping = EarlyStopping(monitor='val_acc', patience=20, verbose=1, mode='auto')
-csvlogger = CSVLogger('log_save.csv', append=False)
-cbks = [lrate, earlystopping]  # , tb_config, checkpoint, csvlogger]
 
 # 使用Generator进行图像增强(增加数据集大小)
 generate = ImageDataGenerator(rotation_range=30, width_shift_range=0.2, height_shift_range=0.2, zoom_range=[0.8, 1.2],
@@ -173,7 +174,7 @@ def show_train_history(train_history, train_metrics, validation_metrics):
     plt.legend(['train', 'validation'], loc='upper left')
 
 # 显示训练过程
-def plot(history=history):
+def plot(history):
     plt.figure(figsize=(12, 4))
     plt.subplot(1, 2, 1)
     show_train_history(history, 'acc', 'val_acc')
@@ -185,9 +186,6 @@ def plot(history=history):
 def plot_confusion_matrix(cm, classes,
                           title='Confusion matrix',
                           cmap=plt.cm.jet):
-    """
-    This function prints and plots the confusion matrix.
-    """
     cm = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
     plt.imshow(cm, interpolation='nearest', cmap=cmap)
     plt.title(title)
@@ -202,14 +200,31 @@ def plot_confusion_matrix(cm, classes,
     plt.tight_layout()
     plt.ylabel('True label')
     plt.xlabel('Predicted label')
-    plt.savefig('confusion_matrix.png')
     plt.show()
 
 # 显示混淆矩阵
-def plot_confuse(model=model):
+def plot_confuse(model, x_val, y_val):
     predictions = model.predict_classes(x_val)
-    conf_mat = confusion_matrix(y_true=y_val.argmax(axis=-1), y_pred=predictions)
+    truelabel = y_val.argmax(axis=-1)   # 将one-hot转化为label
+    conf_mat = confusion_matrix(y_true=truelabel, y_pred=predictions)
     plt.figure()
     plot_confusion_matrix(conf_mat, [])
+
+
+# 卷积网络可视化
+def visual(data, num_layer=1):
+    # data:array数据
+    # layer:第n层的输出
+    data = np.expand_dims(data, axis=0)     # 开头加一维
+    layer = keras.backend.function([model.layers[0].input], [model.layers[num_layer].output])
+    f1 = layer([data])[0]
+    # picpro.ArrayToImage(f1[0, :, :, 0] * 255).show()
+    num = f1.shape[-1]
+    plt.figure(figsize=(8, 8))
+    for i in range(num):
+        plt.subplot(np.ceil(np.sqrt(num)), np.ceil(np.sqrt(num)), i+1)
+        plt.imshow(f1[0, :, :, i] * 255, cmap='gray')
+        plt.axis('off')
+    plt.show()
 
 

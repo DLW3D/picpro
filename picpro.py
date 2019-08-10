@@ -36,8 +36,9 @@ def ReadImageToArray(filename, usefilter=True):
 def ArrayToImage(data):
     if data is None:
         return None
+    # 灰度图像必需只有两维
     if data.shape[-1] == 1:
-        data.shape = data.shape[0:-1]
+        data.shape = np.squeeze(data,axis=-1)
     new_im = Image.fromarray(data.astype(np.uint8))
     return new_im
 
@@ -172,8 +173,8 @@ def ReadFile(path, rate=10, shape=(100,100,3)):
             y_train.append(raw_train[i][0])
             # x_train.append(np.flip(tmp, axis=2))  # simple example of data augmentation
             # y_train.append(raw_train[i][0])
-    x_train = np.array(x_train, dtype=float)
-    x_val = np.array(x_val, dtype=float)
+    x_train = np.array(x_train, dtype=int)
+    x_val = np.array(x_val, dtype=int)
     y_train = np.array(y_train, dtype=int)
     y_val = np.array(y_val, dtype=int)
     return x_train, y_train, x_val, y_val
