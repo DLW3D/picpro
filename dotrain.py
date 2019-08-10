@@ -23,18 +23,29 @@ import keras.backend.tensorflow_backend as KTF
 # 手动分配GPU
 config = tf.ConfigProto()
 config.gpu_options.allow_growth = True  # 不全部占满显存, 按需分配
-config.gpu_options.per_process_gpu_memory_fraction = 0.5  # 指定分配50%空间
+# config.gpu_options.per_process_gpu_memory_fraction = 0.5  # 指定分配50%空间
 sess = tf.Session(config=config)  # 设置session
 KTF.set_session(sess)
 
 batch_size = 256
 num_classes = 7
-epochs = 100
+epochs = 25
 
 input_shape = (48, 48, 1)
 
+# mnist
+(x_train, y_train), (x_val, y_val) = mnist.load_data()
+x_train = np.expand_dims(x_train, axis=-1)
+x_val = np.expand_dims(x_val, axis=-1)
+batch_size = 512
+input_shape = (28, 28, 1)
+num_classes = 10
+
 # 2013
-x_train, y_train, x_val, y_val = picpro.ReadFile(r'train.csv', 10, input_shape)
+# x_train, y_train, x_val, y_val = picpro.ReadFile(r'train.csv', 10, input_shape)
+# batch_size = 256
+# num_classes = 7
+# epochs = 100
 
 # x0_train, y0_train, x0_val, y0_val = picpro.ReadFile(r'0.csv', shape=input_shape)
 # x1_train, y1_train, x1_val, y1_val = picpro.ReadFile(r'1.csv', shape=input_shape)
@@ -89,7 +100,7 @@ checkpoint = ModelCheckpoint(filepath='save.h5', monitor='val_acc', verbose=1, s
                              save_weights_only=False, mode='auto', period=1)
 earlystopping = EarlyStopping(monitor='val_acc', patience=20, verbose=1, mode='auto')
 csvlogger = CSVLogger('log_save.csv', append=False)
-cbks = [lrate, earlystopping, tb_config]  # , checkpoint, csvlogger]
+cbks = [lrate, earlystopping]  # , tb_config, checkpoint, csvlogger]
 
 # 构建模型
 myseed = 10
@@ -236,6 +247,6 @@ def visual(data, num_layer=1):
     plt.figure(figsize=(8, 8))
     for i in range(num):
         plt.subplot(np.ceil(np.sqrt(num)), np.ceil(np.sqrt(num)), i + 1)
-        plt.imshow(f1[0, :, :, i] * 255, cmap='gray')
+        plt.imshow(f1[0, :, :, i] * 255)  # , cmap='gray'
         plt.axis('off')
     plt.show()

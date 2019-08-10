@@ -38,7 +38,7 @@ def ArrayToImage(data):
         return None
     # 灰度图像必需只有两维
     if data.shape[-1] == 1:
-        data.shape = np.squeeze(data,axis=-1)
+        data.shape = np.squeeze(data, axis=-1)
     new_im = Image.fromarray(data.astype(np.uint8))
     return new_im
 
