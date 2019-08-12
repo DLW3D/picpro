@@ -1,85 +1,82 @@
-from keras import backend as K
-from keras.models import load_model
-import numpy as np
+import cv2
 import matplotlib.pyplot as plt
-from keras.applications import VGG16
+import numpy as np
+from keras import backend as K
+from keras.applications.vgg16 import VGG16
+from keras.applications.vgg16 import preprocess_input
+from keras.preprocessing import image
 
-model = load_model('train3.h5')
-# model = VGG16(weights='imagenet',
-#               include_top=False)
+K.clear_session()
 
-# 目标层数
-target = 11
-# 迭代次数
-num_iterate = 100
+# Note that we are including the densely-connected classifier on top;
+# all previous times, we were discarding it.
+model = VGG16(weights='imagenet')
 
-# ----------------------------------可视化滤波器-------------------------------
+# The local path to our target image
+img_path = 'elephant.png'
+# `img` is a PIL image of size 224x224
+img = image.load_img(img_path, target_size=(224, 224))
+# `x` is a float32 Numpy array of shape (224, 224, 3)
+x = image.img_to_array(img)
+# 添加一个维度->(1, 224, 224, 3)
+x = np.expand_dims(x, axis=0)
+# 去均值中心化(平均值取0)
+x = preprocess_input(x)
 
-# 将浮点图像转换成有效图像
-def deprocess_image(x):
-    # 对张量进行规范化
-    x -= x.mean()
-    x /= (x.std() + 1e-5)
-    x *= 0.1
-    x += 0.5
-    x = np.clip(x, 0, 1)
-    # 转化到RGB数组
-    x *= 255
-    x = np.clip(x, 0, 255).astype('uint8')
-    return x
+# 预测
+preds = model.predict(x)
+# 获取最高预测项的index
+index = np.argmax(preds[0])
+# 这是预测向量中的“非洲象”条目
+african_elephant_output = model.output[:, 386]
 
+# 获取最后一个卷积层
+last_conv_layer = model.get_layer('block5_conv3')
 
-# 图像尺寸和通道
-img_height, img_width, num_channels = K.int_shape(model.input)[1:4]
-num_out = K.int_shape(model.layers[target].output)[-1]
+# This is the gradient of the "african elephant" class with regard to
+# the output feature map of `block5_conv3`
+# 求最终输出对目标层输出的导数(优化目标层输出?)
+grads = K.gradients(african_elephant_output, last_conv_layer.output)[0]
 
-for i_kernal in range(num_out):
-    input_img = model.input
-    # 构建一个损耗函数，使所考虑的层的第n个滤波器的激活最大化，-1层softmax层
-    # loss = K.mean(model.layers[-1].output[:, i_kernal])
-    loss = K.mean(model.layers[target].output[:,:,:, i_kernal])  # m*28*28*128
-    # 计算输入图像的梯度与这个损失
-    grads = K.gradients(loss, input_img)[0]
-    # 效用函数通过其L2范数标准化张量
-    grads /= (K.sqrt(K.mean(K.square(grads))) + 1e-5)
-    # 此函数返回给定输入图像的损耗和梯度
-    iterate = K.function([input_img], [loss, grads])
-    # 从带有一些随机噪声的灰色图像开始
-    np.random.seed(0)
-    # 随机图像
-    # input_img_data = np.random.randint(0, 255, (1, img_height, img_width, num_channels))  # 随机
-    # input_img_data = np.zeros((1, img_height, img_width, num_channels))   # 零值
-    input_img_data = np.random.random((1, img_height, img_width, num_channels)) * 20 + 128.   # 随机灰度
-    input_img_data = np.array(input_img_data, dtype=float)
-    failed = False
-    # run gradient ascent
-    print('####################################', i_kernal + 1)
-    loss_value_pre = 0
-    # 运行梯度上升100步
-    for i in range(num_iterate):
-        loss_value, grads_value = iterate([input_img_data])
-        if i % 20 == 0:
-            # print(' predictions: ' , np.shape(predictions), np.argmax(predictions))
-            print('Iteration %d/%d, loss: %f' % (i, 500, loss_value))
-            print('Mean grad: %f' % np.mean(grads_value))
-            if all(np.abs(grads_val) < 0.000001 for grads_val in grads_value.flatten()):
-                failed = True
-                print('Failed')
-                break
-            # print('Image:\n%s' % str(input_img_data[0,0,:,:]))
-            if loss_value_pre != 0 and loss_value_pre > loss_value:
-                break
-            if loss_value_pre == 0:
-                loss_value_pre = loss_value
-            # if loss_value > 0.99:
-            #     break
-        input_img_data += grads_value * 1  # e-3
-    img_re = deprocess_image(input_img_data[0])
-    if num_channels == 1:
-        img_re = np.reshape(img_re, (img_height, img_width))
-    else:
-        img_re = np.reshape(img_re, (img_height, img_width, num_channels))
-    plt.subplot(np.ceil(np.sqrt(num_out)), np.ceil(np.sqrt(num_out)), i_kernal + 1)
-    plt.imshow(img_re)  # , cmap='gray'
+# This is a vector of shape (512,), where each entry
+# is the mean intensity of the gradient over a specific feature map channel
+pooled_grads = K.mean(grads, axis=(0, 1, 2))
 
+# This function allows us to access the values of the quantities we just defined:
+# `pooled_grads` and the output feature map of `block5_conv3`,
+# given a sample image
+iterate = K.function([model.input], [pooled_grads, last_conv_layer.output[0]])
+
+# These are the values of these two quantities, as Numpy arrays,
+# given our sample image of two elephants
+pooled_grads_value, conv_layer_output_value = iterate([x])
+
+# We multiply each channel in the feature map array
+# by "how important this channel is" with regard to the elephant class
+for i in range(512):
+    conv_layer_output_value[:, :, i] *= pooled_grads_value[i]
+
+# 对各通道取平均
+heatmap = np.mean(conv_layer_output_value, axis=-1)
+
+# 规范化
+heatmap = np.maximum(heatmap, 0)
+heatmap /= np.max(heatmap)
+# plt.matshow(heatmap)
+# plt.show()
+
+# 叠加图片
+img = cv2.imread(img_path)
+# 缩放成同等大小
+heatmap = cv2.resize(heatmap, (img.shape[1], img.shape[0]))
+heatmap = np.uint8(255 * heatmap)
+
+# 将热图应用于原始图像
+superimposed_img = img + cv2.applyColorMap(255-heatmap, cv2.COLORMAP_JET) * 0.4
+superimposed_img = (superimposed_img * 255 / np.max(superimposed_img)).astype('uint8')
+plt.imshow(superimposed_img)
 plt.show()
+
+# 保存为文件
+# superimposed_img = img + cv2.applyColorMap(heatmap, cv2.COLORMAP_JET) * 0.4
+# cv2.imwrite('/Users/fchollet/Downloads/elephant_cam.jpg', superimposed_img)
