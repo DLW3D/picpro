@@ -2,20 +2,18 @@ from keras import backend as K
 from keras.models import load_model
 import numpy as np
 import matplotlib.pyplot as plt
-from keras.applications import VGG16
 
-model = load_model('train3.h5')
-# model = VGG16(weights='imagenet',
-#               include_top=False)
-
-# 目标层数
-target = 11
-# 迭代次数
-num_iterate = 100
+model = load_model('mnist2.h5')
+# 图像通道
+num_channels = 1
+# 输入图像尺寸
+img_height = img_width = 28
+# 输出标签数
+num_label = 10
 
 # ----------------------------------可视化滤波器-------------------------------
 
-# 将浮点图像转换成有效图像
+# 将张量转换成有效图像
 def deprocess_image(x):
     # 对张量进行规范化
     x -= x.mean()
@@ -28,16 +26,13 @@ def deprocess_image(x):
     x = np.clip(x, 0, 255).astype('uint8')
     return x
 
-
-# 图像尺寸和通道
-img_height, img_width, num_channels = K.int_shape(model.input)[1:4]
-num_out = K.int_shape(model.layers[target].output)[-1]
-
+num_out = 20
 for i_kernal in range(num_out):
     input_img = model.input
     # 构建一个损耗函数，使所考虑的层的第n个滤波器的激活最大化，-1层softmax层
     # loss = K.mean(model.layers[-1].output[:, i_kernal])
-    loss = K.mean(model.layers[target].output[:,:,:, i_kernal])  # m*28*28*128
+    loss = K.mean(model.layers[11].output[:,:,:, i_kernal])  # m*28*28*128
+    # loss = K.mean(model.output[:, :,:, i_kernal])
     # 计算输入图像的梯度与这个损失
     grads = K.gradients(loss, input_img)[0]
     # 效用函数通过其L2范数标准化张量
@@ -47,18 +42,17 @@ for i_kernal in range(num_out):
     # 从带有一些随机噪声的灰色图像开始
     np.random.seed(0)
     # 随机图像
-    # input_img_data = np.random.randint(0, 255, (1, img_height, img_width, num_channels))  # 随机
-    # input_img_data = np.zeros((1, img_height, img_width, num_channels))   # 零值
-    input_img_data = np.random.random((1, img_height, img_width, num_channels)) * 20 + 128.   # 随机灰度
+    # input_img_data = np.random.randint(0, 255, (1, img_height, img_width, num_channels))
+    input_img_data = np.zeros((1, img_height, img_width, num_channels))
     input_img_data = np.array(input_img_data, dtype=float)
     failed = False
     # run gradient ascent
     print('####################################', i_kernal + 1)
     loss_value_pre = 0
-    # 运行梯度上升100步
-    for i in range(num_iterate):
+    # 运行梯度上升500步
+    for i in range(100):
         loss_value, grads_value = iterate([input_img_data])
-        if i % 20 == 0:
+        if i % 100 == 0:
             # print(' predictions: ' , np.shape(predictions), np.argmax(predictions))
             print('Iteration %d/%d, loss: %f' % (i, 500, loss_value))
             print('Mean grad: %f' % np.mean(grads_value))
@@ -73,13 +67,16 @@ for i_kernal in range(num_out):
                 loss_value_pre = loss_value
             # if loss_value > 0.99:
             #     break
-        input_img_data += grads_value * 1  # e-3
-    img_re = deprocess_image(input_img_data[0])
+        input_img_data += grads_value * 1 * 1  # e-3
+    plt.subplot(np.ceil(np.sqrt(num_out)), np.ceil(np.sqrt(num_out)), i_kernal + 1)
+    # plt.imshow((process(input_img_data[0,:,:,0])*255).astype('uint8'), cmap='Greys') #cmap='Greys'
+    # img_re = deprocess_image(input_img_data[0])
+    img_re = input_img_data[0].astype(np.uint8)
     if num_channels == 1:
         img_re = np.reshape(img_re, (img_height, img_width))
     else:
         img_re = np.reshape(img_re, (img_height, img_width, num_channels))
-    plt.subplot(np.ceil(np.sqrt(num_out)), np.ceil(np.sqrt(num_out)), i_kernal + 1)
     plt.imshow(img_re)  # , cmap='gray'
+    print(img_re)
 
 plt.show()

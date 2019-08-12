@@ -1,24 +1,14 @@
 # !/usr/bin/python
 # -*- coding:utf8 -*-
-import itertools
-import random
-
-import numpy as np
-import keras
+import keras.backend.tensorflow_backend as KTF
+import tensorflow as tf
+from keras import callbacks
 from keras.callbacks import ReduceLROnPlateau, ModelCheckpoint, EarlyStopping, CSVLogger
 from keras.datasets import mnist
-from keras.engine.saving import load_model
+from keras.layers import Dense, Dropout, Flatten, Conv2D, MaxPooling2D, BatchNormalization, LeakyReLU
 from keras.models import Sequential
-from keras.layers import Dense, Dropout, Flatten, Conv2D, MaxPooling2D, BatchNormalization, LeakyReLU, ReLU
-from keras import callbacks
-from keras_preprocessing.image import ImageDataGenerator
-import matplotlib.pyplot as plt
-from sklearn.metrics import confusion_matrix
 
-import picpro
-
-import tensorflow as tf
-import keras.backend.tensorflow_backend as KTF
+from picvisual import *
 
 # 手动分配GPU
 config = tf.ConfigProto()
@@ -152,101 +142,29 @@ model.compile(loss=keras.losses.categorical_crossentropy,
 model.summary()
 
 # 使用Generator进行图像增强(增加数据集大小)
-generate = ImageDataGenerator(rotation_range=30, width_shift_range=0.2, height_shift_range=0.2, zoom_range=[0.8, 1.2],
-                              shear_range=0.2, horizontal_flip=True)
-generate.fit(x_train)
-history = model.fit_generator(generate.flow(x_train, y_train, batch_size=batch_size),
-                              validation_data=(x_val, y_val),
-                              steps_per_epoch=int(len(x_train) / batch_size),
-                              epochs=epochs,
-                              verbose=1,
-                              callbacks=cbks)
+# generate = ImageDataGenerator(rotation_range=30, width_shift_range=0.2, height_shift_range=0.2, zoom_range=[0.8, 1.2],
+#                               shear_range=0.2, horizontal_flip=True)
+# generate.fit(x_train)
+# history = model.fit_generator(generate.flow(x_train, y_train, batch_size=batch_size),
+#                               validation_data=(x_val, y_val),
+#                               steps_per_epoch=int(len(x_train) / batch_size),
+#                               epochs=epochs,
+#                               verbose=1,
+#                               callbacks=cbks)
 
 # train the model 训练模型
-# history = model.fit(x_train, y_train,
-#                     batch_size=batch_size,
-#                     epochs=epochs,
-#                     verbose=1,
-#                     callbacks=cbks,
-#                     validation_data=(x_val, y_val))
+history = model.fit(x_train, y_train,
+                    batch_size=batch_size,
+                    epochs=epochs,
+                    verbose=1,
+                    callbacks=cbks,
+                    validation_data=(x_val, y_val))
 
 
 # val the model 测试模型
 score = model.evaluate(x_val, y_val, verbose=0)
 print('Test loss:', score[0])
 print('Test accuracy:', score[1])
+Save(model, 'save.h5')
 
 
-# 模型保存与读取
-def Save(path):
-    model.save(path)
-
-
-def Load(path):
-    return load_model(path)
-
-
-# 可视化
-def show_train_history(train_history, train_metrics, validation_metrics):
-    plt.plot(train_history.history[train_metrics])
-    plt.plot(train_history.history[validation_metrics])
-    plt.title('Train History')
-    plt.ylabel(train_metrics)
-    plt.xlabel('Epoch')
-    plt.legend(['train', 'validation'], loc='upper left')
-
-
-# 显示训练过程
-def plot(history):
-    plt.figure(figsize=(12, 4))
-    plt.subplot(1, 2, 1)
-    show_train_history(history, 'acc', 'val_acc')
-    plt.subplot(1, 2, 2)
-    show_train_history(history, 'loss', 'val_loss')
-    plt.show()
-
-
-def plot_confusion_matrix(cm, classes,
-                          title='Confusion matrix',
-                          cmap=plt.cm.jet):
-    cm = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
-    plt.imshow(cm, interpolation='nearest', cmap=cmap)
-    plt.title(title)
-    plt.colorbar()
-    tick_marks = np.arange(len(classes))
-    plt.xticks(tick_marks, classes, rotation=45)
-    plt.yticks(tick_marks, classes)
-    thresh = cm.max() / 2.
-    for i, j in itertools.product(range(cm.shape[0]), range(cm.shape[1])):
-        plt.text(j, i, '{:.2f}'.format(cm[i, j]), horizontalalignment="center",
-                 color="white" if cm[i, j] > thresh else "black")
-    plt.tight_layout()
-    plt.ylabel('True label')
-    plt.xlabel('Predicted label')
-    plt.show()
-
-
-# 显示混淆矩阵
-def plot_confuse(model, x_val, y_val):
-    predictions = model.predict_classes(x_val)
-    truelabel = y_val.argmax(axis=-1)  # 将one-hot转化为label
-    conf_mat = confusion_matrix(y_true=truelabel, y_pred=predictions)
-    plt.figure()
-    plot_confusion_matrix(conf_mat, [])
-
-
-# 卷积网络可视化
-def visual(data, num_layer=1):
-    # data:array数据
-    # layer:第n层的输出
-    data = np.expand_dims(data, axis=0)  # 开头加一维
-    layer = keras.backend.function([model.layers[0].input], [model.layers[num_layer].output])
-    f1 = layer([data])[0]
-    # picpro.ArrayToImage(f1[0, :, :, 0] * 255).show()
-    num = f1.shape[-1]
-    plt.figure(figsize=(8, 8))
-    for i in range(num):
-        plt.subplot(np.ceil(np.sqrt(num)), np.ceil(np.sqrt(num)), i + 1)
-        plt.imshow(f1[0, :, :, i] * 255)  # , cmap='gray'
-        plt.axis('off')
-    plt.show()

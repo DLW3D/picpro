@@ -1,11 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="35df8c68-a81d-4d62-9d98-4f887aedbb06" name="Default Changelist" comment="">
-      <change afterPath="$PROJECT_DIR$/test.py" afterDir="false" />
+    <list default="true" id="35df8c68-a81d-4d62-9d98-4f887aedbb06" name="Default Changelist" comment="test">
+      <change afterPath="$PROJECT_DIR$/.idea/dictionaries/3D.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/kernelvisual.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/picvisual.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/dotrain.py" beforeDir="false" afterPath="$PROJECT_DIR$/dotrain.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/picpro.py" beforeDir="false" afterPath="$PROJECT_DIR$/picpro.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test.py" beforeDir="false" afterPath="$PROJECT_DIR$/test.py" afterDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
@@ -18,38 +21,48 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/dotrain.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="44">
-              <caret line="238" column="29" selection-start-line="238" selection-start-column="4" selection-end-line="238" selection-end-column="29" />
+            <state relative-caret-position="-741">
+              <caret line="63" column="24" lean-forward="true" selection-start-line="63" selection-start-column="24" selection-end-line="65" selection-end-column="54" />
               <folding>
-                <element signature="e#41#57#0" expanded="true" />
-                <element signature="e#5773#6018#0" />
-                <element signature="e#6388#7013#0" />
+                <element signature="e#41#87#0" expanded="true" />
               </folding>
             </state>
           </provider>
         </entry>
       </file>
       <file pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/picpro.py">
+        <entry file="file://$PROJECT_DIR$/picvisual.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="57">
-              <caret line="39" selection-start-line="39" selection-end-line="40" selection-end-column="46" />
+            <state relative-caret-position="386">
+              <caret line="84" column="36" lean-forward="true" selection-start-line="84" selection-start-column="4" selection-end-line="84" selection-end-column="36" />
               <folding>
-                <element signature="e#13#22#0" expanded="true" />
-                <marker date="1565463604008" expanded="true" signature="620:669" ph="..." />
+                <element signature="e#41#57#0" expanded="true" />
               </folding>
             </state>
           </provider>
         </entry>
       </file>
       <file pinned="false" current-in-tab="true">
-        <entry file="file://$PROJECT_DIR$/test.py">
+        <entry file="file://$PROJECT_DIR$/picpro.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="19">
-              <caret line="44" column="44" selection-start-line="44" selection-start-column="44" selection-end-line="44" selection-end-column="57" />
+            <state relative-caret-position="386">
+              <caret line="85" lean-forward="true" selection-start-line="85" selection-end-line="85" />
               <folding>
                 <element signature="e#0#30#0" expanded="true" />
-                <element signature="e#278#467#0" />
+                <element signature="e#423#612#0" />
+              </folding>
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/test.py">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="177">
+              <caret line="29" lean-forward="true" selection-end-line="85" />
+              <folding>
+                <element signature="e#0#30#0" expanded="true" />
+                <element signature="e#461#652#0" />
               </folding>
             </state>
           </provider>
@@ -89,11 +102,12 @@
       <find>255</find>
       <find>0.5</find>
       <find>0.25</find>
-      <find>28</find>
       <find>10</find>
       <find>uint8</find>
       <find>np</find>
       <find>seed</find>
+      <find>num_label</find>
+      <find>28</find>
     </findStrings>
     <replaceStrings>
       <replace>#</replace>
@@ -118,9 +132,10 @@
       <list>
         <option value="$PROJECT_DIR$/AutoCrop.py" />
         <option value="$PROJECT_DIR$/hw3.py" />
-        <option value="$PROJECT_DIR$/picpro.py" />
         <option value="$PROJECT_DIR$/dotrain.py" />
+        <option value="$PROJECT_DIR$/picvisual.py" />
         <option value="$PROJECT_DIR$/test.py" />
+        <option value="$PROJECT_DIR$/picpro.py" />
       </list>
     </option>
   </component>
@@ -152,7 +167,12 @@
   </component>
   <component name="PropertiesComponent">
     <property name="last_opened_file_path" value="$PROJECT_DIR$/test.py" />
-    <property name="settings.editor.selected.configurable" value="com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable" />
+    <property name="settings.editor.selected.configurable" value="configurable.group.editor" />
+  </component>
+  <component name="RecentsManager">
+    <key name="CopyFile.RECENT_KEYS">
+      <recent name="C:\Users\78753\Desktop\DL\picpro" />
+    </key>
   </component>
   <component name="RunDashboard">
     <option name="ruleStates">
@@ -324,7 +344,14 @@
       <option name="project" value="LOCAL" />
       <updated>1565445247034</updated>
     </task>
-    <option name="localTasksCounter" value="9" />
+    <task id="LOCAL-00009" summary="test">
+      <created>1565467703427</created>
+      <option name="number" value="00009" />
+      <option name="presentableId" value="LOCAL-00009" />
+      <option name="project" value="LOCAL" />
+      <updated>1565467703427</updated>
+    </task>
+    <option name="localTasksCounter" value="10" />
     <servers />
   </component>
   <component name="TodoView">
@@ -368,7 +395,8 @@
     <MESSAGE value="debug&#10;train2.h5&#10;finish today 8/9" />
     <MESSAGE value="卷积网络层可视化" />
     <MESSAGE value="手动分配GPU" />
-    <option name="LAST_COMMIT_MESSAGE" value="手动分配GPU" />
+    <MESSAGE value="test" />
+    <option name="LAST_COMMIT_MESSAGE" value="test" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
@@ -424,13 +452,7 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/../../ml_2019spring_HW3.ipynb">
-      <provider selected="true" editor-type-id="ipnb-editor">
-        <state>
-          <selected id="0" />
-        </state>
-      </provider>
-    </entry>
+    <entry file="file://$PROJECT_DIR$/../../ml_2019spring_HW3.ipynb" />
     <entry file="file://$USER_HOME$/AppData/Roaming/Python/Python36/site-packages/keras_preprocessing/image/image_data_generator.py">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="226">
@@ -487,9 +509,7 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/confusion_matrix.png">
-      <provider selected="true" editor-type-id="images" />
-    </entry>
+    <entry file="file://$PROJECT_DIR$/confusion_matrix.png" />
     <entry file="file://C:/ProgramData/Anaconda3/Lib/site-packages/keras/callbacks.py">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="226">
@@ -508,24 +528,6 @@
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="38">
           <caret line="2" selection-start-line="2" selection-end-line="2" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://C:/ProgramData/Anaconda3/Lib/site-packages/keras/backend/tensorflow_backend.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="492">
-          <caret line="1380" column="54" selection-start-line="1380" selection-start-column="5" selection-end-line="1380" selection-end-column="54" />
-          <caret line="1382" column="15" selection-start-line="1382" selection-start-column="5" selection-end-line="1382" selection-end-column="15" />
-          <caret line="1383" column="32" selection-start-line="1383" selection-start-column="5" selection-end-line="1383" selection-end-column="32" />
-          <caret line="1384" column="68" selection-start-line="1384" selection-start-column="5" selection-end-line="1384" selection-end-column="68" />
-          <caret line="1385" column="71" selection-start-line="1385" selection-start-column="5" selection-end-line="1385" selection-end-column="71" />
-          <caret line="1386" column="41" selection-start-line="1386" selection-start-column="5" selection-end-line="1386" selection-end-column="41" />
-          <caret line="1387" column="67" selection-start-line="1387" selection-start-column="5" selection-end-line="1387" selection-end-column="67" />
-          <caret line="1388" column="71" selection-start-line="1388" selection-start-column="5" selection-end-line="1388" selection-end-column="71" />
-          <caret line="1389" column="67" selection-start-line="1389" selection-start-column="5" selection-end-line="1389" selection-end-column="67" />
-          <caret line="1390" column="62" selection-start-line="1390" selection-start-column="5" selection-end-line="1390" selection-end-column="62" />
-          <caret line="1392" column="13" selection-start-line="1392" selection-start-column="5" selection-end-line="1392" selection-end-column="13" />
-          <caret line="1393" column="50" selection-start-line="1393" selection-start-column="5" selection-end-line="1393" selection-end-column="50" />
         </state>
       </provider>
     </entry>
@@ -550,36 +552,68 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/dotrain.py">
+    <entry file="file://C:/ProgramData/Anaconda3/Lib/site-packages/keras/backend/tensorflow_backend.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="44">
-          <caret line="238" column="29" selection-start-line="238" selection-start-column="4" selection-end-line="238" selection-end-column="29" />
+        <state relative-caret-position="149">
+          <caret line="1379" column="4" selection-start-line="1379" selection-start-column="4" selection-end-line="1379" selection-end-column="4" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/kernelvisual.py">
+      <provider selected="true" editor-type-id="text-editor" />
+    </entry>
+    <entry file="file://$USER_HOME$/AppData/Roaming/Python/Python36/site-packages/tensorboard/compat/tensorflow_stub/dtypes.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="141">
+          <caret line="549" selection-start-line="549" selection-end-line="549" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://C:/ProgramData/Anaconda3/Lib/site-packages/tensorflow/python/framework/dtypes.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="149">
+          <caret line="516" selection-start-line="516" selection-end-line="516" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/picvisual.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="386">
+          <caret line="84" column="36" lean-forward="true" selection-start-line="84" selection-start-column="4" selection-end-line="84" selection-end-column="36" />
           <folding>
             <element signature="e#41#57#0" expanded="true" />
-            <element signature="e#5773#6018#0" />
-            <element signature="e#6388#7013#0" />
           </folding>
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/picpro.py">
+    <entry file="file://$PROJECT_DIR$/dotrain.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="57">
-          <caret line="39" selection-start-line="39" selection-end-line="40" selection-end-column="46" />
+        <state relative-caret-position="-741">
+          <caret line="63" column="24" lean-forward="true" selection-start-line="63" selection-start-column="24" selection-end-line="65" selection-end-column="54" />
           <folding>
-            <element signature="e#13#22#0" expanded="true" />
-            <marker date="1565463604008" expanded="true" signature="620:669" ph="..." />
+            <element signature="e#41#87#0" expanded="true" />
           </folding>
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/test.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="19">
-          <caret line="44" column="44" selection-start-line="44" selection-start-column="44" selection-end-line="44" selection-end-column="57" />
+        <state relative-caret-position="177">
+          <caret line="29" lean-forward="true" selection-end-line="85" />
           <folding>
             <element signature="e#0#30#0" expanded="true" />
-            <element signature="e#278#467#0" />
+            <element signature="e#461#652#0" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/picpro.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="386">
+          <caret line="85" lean-forward="true" selection-start-line="85" selection-end-line="85" />
+          <folding>
+            <element signature="e#0#30#0" expanded="true" />
+            <element signature="e#423#612#0" />
           </folding>
         </state>
       </provider>
