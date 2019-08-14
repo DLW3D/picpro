@@ -8,7 +8,7 @@ from PIL import Image
 from AutoCrop import AutoCrop
 
 
-def ReadImageToArray(filename, usefilter=True):
+def read_img2arr(filename, usefilter=True):
     # 读取图片
     try:
         im = Image.open(filename)
@@ -31,7 +31,7 @@ def ReadImageToArray(filename, usefilter=True):
     # new_im.show()
 
 
-def ArrayToImage(data):
+def arr2img(data):
     if data is None:
         return None
     # 灰度图像必需只有两维
@@ -42,17 +42,17 @@ def ArrayToImage(data):
 
 
 # 裁剪背景黑色像素
-def Crop(img):
+def crop(img):
     return AutoCrop(img, backgroundColor=(0, 0, 0))
 
 
 # 图片缩放
-def Scale(img, width, height, usecrop=True, blackedge=0):
+def scale(img, width, height, usecrop=True, blackedge=0):
     if img is None:
         return None
     # 裁剪背景黑色像素
     if usecrop:
-        img = Crop(img)
+        img = crop(img)
     # 加随机黑边%
     if blackedge != 0:
         w, h = img.size
@@ -78,14 +78,14 @@ def Scale(img, width, height, usecrop=True, blackedge=0):
 
 
 # 图片缩放 file2file
-def Process(filename, savename, w, h):
-    img = Scale(ArrayToImage(ReadImageToArray(filename)), w, h)
+def scale_f2f(filename, savename, w, h):
+    img = scale(arr2img(read_img2arr(filename)), w, h)
     if img is not None:
         img.save(savename)
 
 
 # 图片缩放 批处理folder2folder************
-def Processes(sorcedir, targetdir, w, h):
+def scale_fo2fo(sorcedir, targetdir, w, h):
     print("正在扫描文件夹...")
     # 列出目录下文件和子目录
     files = os.listdir(sorcedir)
@@ -93,25 +93,25 @@ def Processes(sorcedir, targetdir, w, h):
     files = [f for f in files if os.path.isfile(os.path.join(sorcedir, f))]
     print("正在处理文件...")
     for f in files:
-        Process(os.path.join(sorcedir, f), os.path.join(targetdir, f), w, h)
+        scale_f2f(os.path.join(sorcedir, f), os.path.join(targetdir, f), w, h)
     return
 
 
 # 读取文件夹中所有图片,输出Array
-def ReadDatas(sorcedir):
+def read_all_img2arr(sorcedir):
     print('正在读取图片...')
     files = os.listdir(sorcedir)
     files = [f for f in files if os.path.isfile(os.path.join(sorcedir, f))]
     data = []
     for f in files:
-        arr = ReadImageToArray(os.path.join(sorcedir, f))
+        arr = read_img2arr(os.path.join(sorcedir, f))
         if arr is not None:
             data.append(arr)
     return np.array(data, dtype=int)
 
 
 # 将Array保存成CSV (文件的大小大概是图片的20倍左右)
-def SaveFile(label, data, path):
+def arr2csv(label, data, path):
     print('正在保存成CSV文件...')
     # reshape
     shape = data.shape
@@ -134,9 +134,9 @@ def SaveFile(label, data, path):
 
 
 # 对文件夹中所有图片进行 图片缩放 保存成CSV文件*********
-def FileToCSV(label, dir, path, width=0, height=0):
+def f2csv(label, dir, path, width=0, height=0):
     if width == 0 | height == 0:
-        SaveFile(label, ReadDatas(dir), path)
+        arr2csv(label, read_all_img2arr(dir), path)
     else:
         print("正在扫描文件夹...")
         # 列出目录下文件和子目录
@@ -146,15 +146,15 @@ def FileToCSV(label, dir, path, width=0, height=0):
         print("正在处理文件...")
         data = []
         for f in files:
-            img = Scale(ArrayToImage(ReadImageToArray(os.path.join(dir, f))), width, height)
+            img = scale(arr2img(read_img2arr(os.path.join(dir, f))), width, height)
             if img is not None:
                 data.append(np.array(img, dtype=int))
-        SaveFile(label, np.array(data, dtype=int), path)
+        arr2csv(label, np.array(data, dtype=int), path)
     return
 
 
 # 读取CSV
-def ReadFile(path, rate=10, shape=(100,100,3)):
+def csv2arr(path, rate=10, shape=(100, 100, 3)):
     print("正在读取CSV文件...")
     x_train = []
     y_train = []

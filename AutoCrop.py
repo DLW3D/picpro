@@ -73,7 +73,7 @@ def AutoCrop(image,backgroundColor=None):
     elif image.mode=='RGB':
         if not backgroundColor:
             backgroundColor = mostPopularEdgeColor(image)
-        # Crop a non-transparent image.
+        # crop a non-transparent image.
         # .getbbox() always crops the black color.
         # So we need to substract the "background" color from our image.
         bg = Image.new("RGB", image.size, backgroundColor)

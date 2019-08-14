@@ -7,8 +7,12 @@ from keras.callbacks import ReduceLROnPlateau, ModelCheckpoint, EarlyStopping, C
 from keras.datasets import mnist
 from keras.layers import Dense, Dropout, Flatten, Conv2D, MaxPooling2D, BatchNormalization, LeakyReLU
 from keras.models import Sequential
+from keras_preprocessing.image import ImageDataGenerator
 
+import picpro
 from picvisual import *
+from kernelvisual import *
+from heatmap import *
 
 # 手动分配GPU
 config = tf.ConfigProto()
@@ -17,45 +21,47 @@ config.gpu_options.allow_growth = True  # 不全部占满显存, 按需分配
 sess = tf.Session(config=config)  # 设置session
 KTF.set_session(sess)
 
-batch_size = 256
-num_classes = 7
-epochs = 25
+batch_size = 64
+num_classes = 2
+epochs = 50
 
-input_shape = (48, 48, 1)
+input_shape = (100, 100, 3)
 
 # mnist
-(x_train, y_train), (x_val, y_val) = mnist.load_data()
-x_train = np.expand_dims(x_train, axis=-1)
-x_val = np.expand_dims(x_val, axis=-1)
-batch_size = 512
-input_shape = (28, 28, 1)
-num_classes = 10
+# (x_train, y_train), (x_val, y_val) = mnist.load_data()
+# x_train = np.expand_dims(x_train, axis=-1)
+# x_val = np.expand_dims(x_val, axis=-1)
+# batch_size = 512
+# input_shape = (28, 28, 1)
+# num_classes = 10
 
 # 2013
-# x_train, y_train, x_val, y_val = picpro.ReadFile(r'train.csv', 10, input_shape)
+# x_train, y_train, x_val, y_val = picpro.csv2arr(r'train.csv', 10, (48,48,1))
 # batch_size = 256
 # num_classes = 7
 # epochs = 100
 
-# x0_train, y0_train, x0_val, y0_val = picpro.ReadFile(r'0.csv', shape=input_shape)
-# x1_train, y1_train, x1_val, y1_val = picpro.ReadFile(r'1.csv', shape=input_shape)
+# x0_train, y0_train, x0_val, y0_val = picpro.csv2arr(r'0.csv', shape=(100,100,3))
+# x1_train, y1_train, x1_val, y1_val = picpro.csv2arr(r'1.csv', shape=(100,100,3))
+x0_train, y0_train, x0_val, y0_val = picpro.csv2arr(r'C:\Users\78753\Desktop\舰B\0.csv', shape=(100, 100, 3))
+x1_train, y1_train, x1_val, y1_val = picpro.csv2arr(r'C:\Users\78753\Desktop\舰R\1.csv', shape=(100, 100, 3))
 
 
 print('正在处理训练集...')
 # 合成训练集
-# x_train = np.concatenate([x1_train, x0_train], 0)
-# y_train = np.concatenate([y1_train, y0_train], 0)
-# x_val = np.concatenate([x1_val, x0_val], 0)
-# y_val = np.concatenate([y1_val, y0_val], 0)
-# del x0_train, y0_train, x0_val, y0_val
-# del x1_train, y1_train, x1_val, y1_val
+x_train = np.concatenate([x1_train, x0_train], 0)
+y_train = np.concatenate([y1_train, y0_train], 0)
+x_val = np.concatenate([x1_val, x0_val], 0)
+y_val = np.concatenate([y1_val, y0_val], 0)
+del x0_train, y0_train, x0_val, y0_val
+del x1_train, y1_train, x1_val, y1_val
 
 
 # 打乱训练集
-# index = [i for i in range(len(y_train))]
-# random.shuffle(index)
-# x_train = x_train[index]
-# y_train = y_train[index]
+index = [i for i in range(len(y_train))]
+random.shuffle(index)
+x_train = x_train[index]
+y_train = y_train[index]
 # 添加噪声
 # for i in x_train:
 #     i += np.random.rand(input_shape)/25
@@ -71,7 +77,7 @@ print(x_train.shape[0], 'train samples')
 print(x_val.shape[0], 'val samples')
 
 # 测试
-# picpro.ArrayToImage(x_train[0]).show()
+# picpro.arr2img(x_train[0]).show()
 
 
 print("正在构建模型...")
@@ -83,12 +89,12 @@ tb_config = keras.callbacks.TensorBoard(
     write_images=True,
     histogram_freq=1)
 early_stopping = callbacks.EarlyStopping(patience=20, mode='auto', verbose=1)
-lrate = ReduceLROnPlateau(monitor='val_loss', factor=0.1, patience=4, verbose=1, mode='auto', epsilon=0.0001,
+lrate = ReduceLROnPlateau(monitor='val_loss', factor=0.1, patience=3, verbose=1, mode='auto', epsilon=0.0001,
                           cooldown=0,
                           min_lr=0.00001)
 checkpoint = ModelCheckpoint(filepath='save.h5', monitor='val_acc', verbose=1, save_best_only=True,
                              save_weights_only=False, mode='auto', period=1)
-earlystopping = EarlyStopping(monitor='val_acc', patience=20, verbose=1, mode='auto')
+earlystopping = EarlyStopping(monitor='val_loss', patience=5, verbose=1, mode='auto')
 csvlogger = CSVLogger('log_save.csv', append=False)
 cbks = [lrate, earlystopping]  # , tb_config, checkpoint, csvlogger]
 
@@ -153,18 +159,18 @@ model.summary()
 #                               callbacks=cbks)
 
 # train the model 训练模型
-history = model.fit(x_train, y_train,
-                    batch_size=batch_size,
-                    epochs=epochs,
-                    verbose=1,
-                    callbacks=cbks,
-                    validation_data=(x_val, y_val))
+# history = model.fit(x_train, y_train,
+#                     batch_size=batch_size,
+#                     epochs=epochs,
+#                     verbose=1,
+#                     callbacks=cbks,
+#                     validation_data=(x_val, y_val))
 
 
 # val the model 测试模型
 score = model.evaluate(x_val, y_val, verbose=0)
 print('Test loss:', score[0])
 print('Test accuracy:', score[1])
-Save(model, 'save.h5')
+save(model, 'save.h5')
 
 

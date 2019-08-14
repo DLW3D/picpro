@@ -11,21 +11,21 @@ from picpro import *
 
 
 # 模型保存与读取
-def Save(model, path):
+def save(model, path):
     model.save(path)
 
 
-def Load(path):
+def load(path):
     return load_model(path)
 
 
 # 使用模型判断图片*********
-def Tester(model, path):
-    tester = np.array(Scale(ArrayToImage(ReadImageToArray(path)), 100, 100)).reshape(1, 100, 100, 3)
+def tester(model, path):
+    tester = np.array(scale(arr2img(read_img2arr(path)), 100, 100)).reshape(1, 100, 100, 3)
     return model.predict(tester)
 
 # 检查测试数据分布情况
-def CheckLabel(y_train):
+def check_label(y_train):
     count = np.zeros(y_train.shape[1], dtype=int)
     for i in y_train.argmax(axis=-1):
         count[i] += 1
@@ -78,7 +78,7 @@ def plot_confuse(model, x_val, y_val):
     truelabel = y_val.argmax(axis=-1)  # 将one-hot转化为label
     conf_mat = confusion_matrix(y_true=truelabel, y_pred=predictions)
     plt.figure()
-    plot_confusion_matrix(conf_mat, [])
+    plot_confusion_matrix(conf_mat, range(np.max(truelabel)+1))
 
 
 # 卷积网络可视化
@@ -88,7 +88,7 @@ def visual(model, data, num_layer=1):
     data = np.expand_dims(data, axis=0)  # 开头加一维
     layer = keras.backend.function([model.layers[0].input], [model.layers[num_layer].output])
     f1 = layer([data])[0]
-    # picpro.ArrayToImage(f1[0, :, :, 0] * 255).show()
+    # picpro.arr2img(f1[0, :, :, 0] * 255).show()
     num = f1.shape[-1]
     plt.figure(figsize=(8, 8))
     for i in range(num):
