@@ -88,7 +88,6 @@ def visual(model, data, num_layer=1):
     data = np.expand_dims(data, axis=0)  # 开头加一维
     layer = keras.backend.function([model.layers[0].input], [model.layers[num_layer].output])
     f1 = layer([data])[0]
-    # picpro.arr2img(f1[0, :, :, 0] * 255).show()
     num = f1.shape[-1]
     plt.figure(figsize=(8, 8))
     for i in range(num):

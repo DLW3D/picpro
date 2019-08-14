@@ -21,12 +21,12 @@ def heatmap(model, data_img, layer_idx, img_show=None, pred_idx=None):
         preds = model.predict(data_img)
         # 获取最高预测项的index
         pred_idx = np.argmax(preds[0])
-    # index 应该为 386(非洲象)
-    african_elephant_output = model.output[:, pred_idx]
+    # 目标输出估值
+    target_output = model.output[:, pred_idx]
     # 目标层的输出代表各通道关注的位置
     last_conv_layer_output = model.layers[layer_idx].output
     # 求最终输出对目标层输出的导数(优化目标层输出),代表目标层输出对结果的影响
-    grads = K.gradients(african_elephant_output, last_conv_layer_output)[0]
+    grads = K.gradients(target_output, last_conv_layer_output)[0]
     # 将每个通道的导数取平均,值越高代表该通道影响越大
     pooled_grads = K.mean(grads, axis=(0, 1, 2))
     iterate = K.function([model.input], [pooled_grads, last_conv_layer_output[0]])
@@ -56,7 +56,7 @@ def heatmap(model, data_img, layer_idx, img_show=None, pred_idx=None):
     # plt.show()
     # 保存为文件
     # superimposed_img = img + cv2.applyColorMap(heatmap, cv2.COLORMAP_JET) * 0.4
-    # cv2.imwrite('/Users/fchollet/Downloads/elephant_cam.jpg', superimposed_img)
+    # cv2.imwrite('ele.png', superimposed_img)
 
 # 生成所有卷积层的热度图
 def heatmaps(model, data_img, img_show=None):

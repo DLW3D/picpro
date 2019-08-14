@@ -53,22 +53,18 @@ def kernelvisual(model, layer_target=1, num_iterate=100):
         # input_img_data = np.zeros((1, img_height, img_width, num_channels))   # 零值
         input_img_data = np.random.random((1, img_height, img_width, num_channels)) * 20 + 128.   # 随机灰度
         input_img_data = np.array(input_img_data, dtype=float)
-        failed = False
-        # run gradient ascent
+        # 运行梯度上升
         print('####################################', i_kernal + 1)
         loss_value_pre = 0
         # 运行梯度上升num_iterate步
         for i in range(num_iterate):
             loss_value, grads_value = iterate([input_img_data])
             if i % int(num_iterate/5) == 0:
-                # print(' predictions: ' , np.shape(predictions), np.argmax(predictions))
                 print('Iteration %d/%d, loss: %f' % (i, num_iterate, loss_value))
                 print('Mean grad: %f' % np.mean(grads_value))
                 if all(np.abs(grads_val) < 0.000001 for grads_val in grads_value.flatten()):
-                    failed = True
                     print('Failed')
                     break
-                # print('Image:\n%s' % str(input_img_data[0,0,:,:]))
                 if loss_value_pre != 0 and loss_value_pre > loss_value:
                     break
                 if loss_value_pre == 0:
@@ -82,7 +78,7 @@ def kernelvisual(model, layer_target=1, num_iterate=100):
         else:
             img_re = np.reshape(img_re, (img_height, img_width, num_channels))
         plt.subplot(np.ceil(np.sqrt(num_out)), np.ceil(np.sqrt(num_out)), i_kernal + 1)
-        plt.imshow(img_re)  # , cmap='gray'
+        plt.imshow(img_re)
         plt.axis('off')
 
     plt.show()

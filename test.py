@@ -12,11 +12,12 @@ from heatmap import *
 
 # K.clear_session()
 #
-# model = VGG16(weights='imagenet')
-# data_img = image.img_to_array(image.load_img('elephant.png'))
-# # VGG16预处理:RGB转BGR,并对每一个颜色通道去均值中心化
-# data_img = preprocess_input(data_img)
-# img_show = image.img_to_array(image.load_img('elephant.png'))
+model = VGG16(weights='imagenet')
+data_img = image.img_to_array(image.load_img('elephant.png'))
+# VGG16预处理:RGB转BGR,并对每一个颜色通道去均值中心化
+data_img = preprocess_input(data_img)
+img_show = image.img_to_array(image.load_img('elephant.png'))
+heatmaps(model, data_img, img_show)
 
 # model = load_model('mnist2.h5')
 # (x_train, y_train), (x_val, y_val) = mnist.load_data()
