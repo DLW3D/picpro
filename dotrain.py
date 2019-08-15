@@ -11,8 +11,6 @@ from keras_preprocessing.image import ImageDataGenerator
 
 import picpro
 from picvisual import *
-from kernelvisual import *
-from heatmap import *
 
 # 手动分配GPU
 config = tf.ConfigProto()

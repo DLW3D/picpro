@@ -1,10 +1,10 @@
 import os, shutil
 
 # 原始数据集
-original_dataset_dir = r'C:\Users\78753\Desktop\DL\picpro\kaggle_original_data'
+original_dataset_dir = r'C:\Users\78753\Desktop\DL\picpro\cats_and_dogs\kaggle_original_data'
 
 # 保存小的数据集
-base_dir = r'C:\Users\78753\Desktop\DL\picpro\cats_and_dogs_small'
+base_dir = r'C:\Users\78753\Desktop\DL\picpro\cats_and_dogs\cats_and_dogs_small'
 os.mkdir(base_dir)
 
 # 细分数据集
