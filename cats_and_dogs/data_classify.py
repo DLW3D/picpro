@@ -1,4 +1,5 @@
-import os, shutil
+import os
+import shutil
 
 # 原始数据集
 original_dataset_dir = r'C:\Users\78753\Desktop\DL\picpro\cats_and_dogs\kaggle_original_data'

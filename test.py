@@ -1,80 +1,141 @@
-import os, shutil
 
-# 原始数据集
-original_dataset_dir = r'C:\Users\78753\Desktop\DL\picpro\kaggle_original_data'
+# ************* 加载数据
+import os
+# download from http://ai.stanford.edu/~amaas/data/sentiment/
+imdb_dir = r'C:\Users\78753\.keras\data\aclImdb'
+train_dir = os.path.join(imdb_dir, 'train')
 
-# 保存小的数据集
-base_dir = r'C:\Users\78753\Desktop\DL\picpro\cats_and_dogs_small'
-os.mkdir(base_dir)
+labels = []
+texts = []
 
-# 细分数据集
-train_dir = os.path.join(base_dir, 'train')
-os.mkdir(train_dir)
-validation_dir = os.path.join(base_dir, 'validation')
-os.mkdir(validation_dir)
-test_dir = os.path.join(base_dir, 'test')
-os.mkdir(test_dir)
+for label_type in ['neg', 'pos']:
+    dir_name = os.path.join(train_dir, label_type)
+    for fname in os.listdir(dir_name):
+        if fname[-4:] == '.txt':
+            f = open(os.path.join(dir_name, fname),'r', encoding='UTF-8')
+            texts.append(f.read())
+            f.close()
+            if label_type == 'neg':
+                labels.append(0)
+            else:
+                labels.append(1)
 
-# 细分数据集分类
-train_cats_dir = os.path.join(train_dir, 'cats')
-os.mkdir(train_cats_dir)
-train_dogs_dir = os.path.join(train_dir, 'dogs')
-os.mkdir(train_dogs_dir)
-validation_cats_dir = os.path.join(validation_dir, 'cats')
-os.mkdir(validation_cats_dir)
-validation_dogs_dir = os.path.join(validation_dir, 'dogs')
-os.mkdir(validation_dogs_dir)
-test_cats_dir = os.path.join(test_dir, 'cats')
-os.mkdir(test_cats_dir)
-test_dogs_dir = os.path.join(test_dir, 'dogs')
-os.mkdir(test_dogs_dir)
+# ************* 格式化数据
+from keras.preprocessing.text import Tokenizer
+from keras.preprocessing.sequence import pad_sequences
+import numpy as np
 
-# 复制1000猫到train_cats_dir
-fnames = ['cat.{}.jpg'.format(i) for i in range(1000)]
-for fname in fnames:
-    src = os.path.join(original_dataset_dir, fname)
-    dst = os.path.join(train_cats_dir, fname)
-    shutil.copyfile(src, dst)
+maxlen = 100  # 一条评论最大长度 100 words
+training_samples = 20000  # 训练样本 200 samples
+validation_samples = 5000  # 验证样本 10000 samples
+max_words = 10000  # 只编码最多 10000 words
 
-# 复制500猫到validation_cats_dir
-fnames = ['cat.{}.jpg'.format(i) for i in range(1000, 1500)]
-for fname in fnames:
-    src = os.path.join(original_dataset_dir, fname)
-    dst = os.path.join(validation_cats_dir, fname)
-    shutil.copyfile(src, dst)
+# 初始化分词器
+tokenizer = Tokenizer(num_words=max_words)
+tokenizer.fit_on_texts(texts)
+# 使用分词器编码文本
+sequences = tokenizer.texts_to_sequences(texts)
 
-# 复制500猫到test_cats_dir
-fnames = ['cat.{}.jpg'.format(i) for i in range(1500, 2000)]
-for fname in fnames:
-    src = os.path.join(original_dataset_dir, fname)
-    dst = os.path.join(test_cats_dir, fname)
-    shutil.copyfile(src, dst)
+word_index = tokenizer.word_index
+print('Found %s unique tokens.' % len(word_index))
 
-# 复制1000狗到train_dogs_dir
-fnames = ['dog.{}.jpg'.format(i) for i in range(1000)]
-for fname in fnames:
-    src = os.path.join(original_dataset_dir, fname)
-    dst = os.path.join(train_dogs_dir, fname)
-    shutil.copyfile(src, dst)
+# 截断过长样本
+data = pad_sequences(sequences, maxlen=maxlen)
 
-# 复制500狗到validation_dogs_dir
-fnames = ['dog.{}.jpg'.format(i) for i in range(1000, 1500)]
-for fname in fnames:
-    src = os.path.join(original_dataset_dir, fname)
-    dst = os.path.join(validation_dogs_dir, fname)
-    shutil.copyfile(src, dst)
+labels = np.asarray(labels)
+print('Shape of data tensor:', data.shape)
+print('Shape of label tensor:', labels.shape)
 
-# 复制500狗到test_dogs_dir
-fnames = ['dog.{}.jpg'.format(i) for i in range(1500, 2000)]
-for fname in fnames:
-    src = os.path.join(original_dataset_dir, fname)
-    dst = os.path.join(test_dogs_dir, fname)
-    shutil.copyfile(src, dst)
+# 打乱数据
+indices = np.arange(data.shape[0])
+np.random.shuffle(indices)
+data = data[indices]
+labels = labels[indices]
 
-# 检查
-print('total training cat images:', len(os.listdir(train_cats_dir)))
-print('total training dog images:', len(os.listdir(train_dogs_dir)))
-print('total validation cat images:', len(os.listdir(validation_cats_dir)))
-print('total validation dog images:', len(os.listdir(validation_dogs_dir)))
-print('total test cat images:', len(os.listdir(test_cats_dir)))
-print('total test dog images:', len(os.listdir(test_dogs_dir)))
+# 拆分数据
+x_train = data[:training_samples]
+y_train = labels[:training_samples]
+x_val = data[training_samples: training_samples + validation_samples]
+y_val = labels[training_samples: training_samples + validation_samples]
+
+
+# ************* 调用GloVe
+# download from https://nlp.stanford.edu/projects/glove/
+glove_dir = r'C:\Users\78753\.keras\data\glove'
+
+embeddings_index = {}
+f = open(os.path.join(glove_dir, 'glove.6B.100d.txt'),'r', encoding='UTF-8')
+for line in f:
+    values = line.split()
+    word = values[0]
+    coefs = np.asarray(values[1:], dtype='float32')
+    embeddings_index[word] = coefs
+
+f.close()
+
+print('Found %s word vectors.' % len(embeddings_index))
+
+# GloVe的向量维度
+embedding_dim = 100
+
+# 匹配GloVe向量
+embedding_matrix = np.zeros((max_words, embedding_dim))
+for word, i in word_index.items():
+    if i < max_words:
+        embedding_vector = embeddings_index.get(word)
+        if embedding_vector is not None:
+            # Words not found in embedding index will be all-zeros.
+            embedding_matrix[i] = embedding_vector
+
+
+# ************** 建模
+from keras.models import Sequential
+from keras.layers import Embedding, Flatten, Dense
+
+model = Sequential()
+model.add(Embedding(max_words, embedding_dim, input_length=maxlen))
+model.add(Flatten())
+model.add(Dense(32, activation='relu'))
+model.add(Dense(1, activation='sigmoid'))
+model.summary()
+
+# 手动装配权重
+model.layers[0].set_weights([embedding_matrix])
+model.layers[0].trainable = False
+
+# 训练
+model.compile(optimizer='rmsprop',
+              loss='binary_crossentropy',
+              metrics=['acc'])
+history = model.fit(x_train, y_train,
+                    epochs=10,
+                    batch_size=32,
+                    validation_data=(x_val, y_val))
+model.save('save.h5')
+
+
+# ************* 测试
+test_dir = os.path.join(imdb_dir, 'test')
+
+labels = []
+texts = []
+
+for label_type in ['neg', 'pos']:
+    dir_name = os.path.join(test_dir, label_type)
+    for fname in sorted(os.listdir(dir_name)):
+        if fname[-4:] == '.txt':
+            f = open(os.path.join(dir_name, fname),'r', encoding='UTF-8')
+            texts.append(f.read())
+            f.close()
+            if label_type == 'neg':
+                labels.append(0)
+            else:
+                labels.append(1)
+
+sequences = tokenizer.texts_to_sequences(texts)
+x_test = pad_sequences(sequences, maxlen=maxlen)
+y_test = np.asarray(labels)
+
+model.evaluate(x_test, y_test)
+
+

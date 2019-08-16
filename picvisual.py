@@ -9,6 +9,7 @@ from keras.engine.saving import load_model
 from sklearn.metrics import confusion_matrix
 from keras import backend as K
 from keras.preprocessing import image
+import numpy as np
 
 from picpro import *
 
@@ -85,7 +86,7 @@ def plot_confuse(model, x_val, y_val):
 
 # ******************* 卷积网络可视化 ******************* #
 # 卷积网络可视化
-def visual(model, data, num_layer=1):
+def visual_data(model, data, num_layer=1):
     # data:array数据
     # layer:第n层的输出
     data = np.expand_dims(data, axis=0)  # 开头加一维
@@ -116,14 +117,15 @@ def deprocess_image(x):
 
 
 # 可视化滤波器
-def kernelvisual(model, layer_target=1, num_iterate=100):
+def kernelvisual(model, layer_target=-1, num_iterate=100):
     # 图像尺寸和通道
     img_height, img_width, num_channels = K.int_shape(model.input)[1:4]
     num_out = K.int_shape(model.layers[layer_target].output)[-1]
-
     plt.suptitle('[%s] convnet filters visualizing' % model.layers[layer_target].name)
-
     print('第%d层有%d个通道' % (layer_target, num_out))
+    if num_out > 64:
+        num_out = 64
+    print('通道数过多,只处理前%d个通道' % num_out)
     for i_kernal in range(num_out):
         input_img = model.input
         # 构建一个损耗函数，使所考虑的层的第n个滤波器的激活最大化，-1层softmax层
@@ -171,7 +173,6 @@ def kernelvisual(model, layer_target=1, num_iterate=100):
         plt.subplot(np.ceil(np.sqrt(num_out)), np.ceil(np.sqrt(num_out)), i_kernal + 1)
         plt.imshow(img_re)
         plt.axis('off')
-
     plt.show()
 
 
@@ -205,7 +206,6 @@ def heatmap(model, data_img, layer_idx, img_show=None, pred_idx=None):
     # 将各通道关注的位置和各通道的影响乘起来
     for i in range(conv_layer_output_value.shape[-1]):
         conv_layer_output_value[:, :, i] *= pooled_grads_value[i]
-
     # 对各通道取平均得图片位置对结果的影响
     heatmap = np.mean(conv_layer_output_value, axis=-1)
     # 规范化
@@ -234,8 +234,6 @@ def heatmaps(model, data_img, img_show=None):
     if img_show is None:
         img_show = np.array(data_img)
     # Resize
-    input_shape = K.int_shape(model.input)[1:3]  # (28,28,1)
-    data_img = image.img_to_array(image.array_to_img(data_img).resize(input_shape))
     # 添加一个维度->(1, 224, 224, 3)
     data_img = np.expand_dims(data_img, axis=0)
     # 预测
@@ -251,12 +249,12 @@ def heatmaps(model, data_img, img_show=None):
     plt.suptitle('heatmaps for each conv')
     for i in range(indexs.__len__()):
         ret = heatmap(model, data_img, indexs[i], img_show=img_show, pred_idx=pred_idx)
-        plt.subplot(np.ceil(np.sqrt(indexs.__len__()*2)), np.ceil(np.sqrt(indexs.__len__()*2)), i*2 + 1)\
-            .set_title(model.layers[indexs[i]].name)
+        plt.subplot(np.ceil(np.sqrt(indexs.__len__()*2)), np.ceil(np.sqrt(indexs.__len__()*2)), i*2 + 1)
+        plt.title(model.layers[indexs[i]].name)
         plt.imshow(ret[0])
         plt.axis('off')
-        plt.subplot(np.ceil(np.sqrt(indexs.__len__()*2)), np.ceil(np.sqrt(indexs.__len__()*2)), i*2 + 2)\
-            .set_title(model.layers[indexs[i]].name)
+        plt.subplot(np.ceil(np.sqrt(indexs.__len__()*2)), np.ceil(np.sqrt(indexs.__len__()*2)), i*2 + 2)
+        plt.title(model.layers[indexs[i]].name)
         plt.imshow(ret[1])
         plt.axis('off')
     plt.show()
