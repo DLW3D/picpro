@@ -1,179 +1,116 @@
-"""
-生成器（generator）
-首先，创建一个“生成器（generator）”模型，它将一个矢量（从潜在空间 - 在训练期间随机采样）转换为候选图像。
-GAN通常出现的许多问题之一是generator卡在生成的图像上，看起来像噪声。一种可能的解决方案是在鉴别器（discriminator）
-和生成器（generator）上使用dropout。
-"""
+import os
+import tensorflow as tf
+import keras.backend.tensorflow_backend as KTF
+from keras.preprocessing import image
+from keras.preprocessing.image import ImageDataGenerator
 import keras
-from keras import layers
+from keras import layers, Sequential, models
 import numpy as np
 
-latent_dim = 32
-height = 32
-width = 32
-channels = 3
+latent_dim = 100
+img_shape = (96, 96, 3)
 
-generator_input = keras.Input(shape=(latent_dim,))
-
-# 首先，将输入转换为16x16 128通道的feature map
-x = layers.Dense(128 * 16 * 16)(generator_input)
-x = layers.LeakyReLU()(x)
-x = layers.Reshape((16, 16, 128))(x)
-
-# 然后，添加卷积层
-x = layers.Conv2D(256, 5, padding='same')(x)
-x = layers.LeakyReLU()(x)
-
-# 上采样至 32 x 32
-x = layers.Conv2DTranspose(256, 4, strides=2, padding='same')(x)
-x = layers.LeakyReLU()(x)
-
-# 添加更多的卷积层
-x = layers.Conv2D(256, 5, padding='same')(x)
-x = layers.LeakyReLU()(x)
-x = layers.Conv2D(256, 5, padding='same')(x)
-x = layers.LeakyReLU()(x)
-
-# 生成一个 32x32 1-channel 的feature map
-x = layers.Conv2D(channels, 7, activation='tanh', padding='same')(x)
-generator = keras.models.Model(generator_input, x)
-generator.summary()
+def build_generator():
+    model = Sequential()
+    model.add(layers.Dense(512 * 6 * 6, activation='relu', input_dim=latent_dim))  # 输入维度为100
+    model.add(layers.Reshape((6, 6, 512)))
+    model.add(layers.UpSampling2D())  # 进行上采样，变成14*14*128
+    model.add(layers.Conv2D(256, kernel_size=5, padding='same'))
+    model.add(layers.BatchNormalization(momentum=0.8))
+    model.add(layers.Activation("relu"))  #
+    model.add(layers.UpSampling2D())
+    model.add(layers.Conv2D(128, kernel_size=5, padding="same"))
+    model.add(layers.BatchNormalization(momentum=0.8))
+    model.add(layers.Activation("relu"))
+    model.add(layers.UpSampling2D())
+    model.add(layers.Conv2D(64, kernel_size=5, padding="same"))
+    model.add(layers.BatchNormalization(momentum=0.8))
+    model.add(layers.Activation("relu"))
+    model.add(layers.UpSampling2D())
+    model.add(layers.Conv2D(img_shape[-1], kernel_size=5, padding="same"))
+    model.add(layers.Activation("tanh"))
+    model.summary()  # 打印网络参数
+    noise = models.Input(shape=(latent_dim,))
+    img = model(noise)
+    return models.Model(noise, img)  # 定义一个 一个输入noise一个输出img的模型
 
 
-'''
-discriminator(鉴别器)
-创建鉴别器模型，它将候选图像（真实的或合成的）作为输入，并将其分为两类：“生成的图像”或“来自训练集的真实图像”。
-'''
-discriminator_input = layers.Input(shape=(height, width, channels))
-x = layers.Conv2D(128, 3)(discriminator_input)
-x = layers.LeakyReLU()(x)
-x = layers.Conv2D(128, 4, strides=2)(x)
-x = layers.LeakyReLU()(x)
-x = layers.Conv2D(128, 4, strides=2)(x)
-x = layers.LeakyReLU()(x)
-x = layers.Conv2D(128, 4, strides=2)(x)
-x = layers.LeakyReLU()(x)
-x = layers.Flatten()(x)
-
-# 重要的技巧（添加一个dropout层）
-x = layers.Dropout(0, 4)(x)
-
-# 分类层
-x = layers.Dense(1, activation='sigmoid')(x)
-
-discriminator = keras.models.Model(discriminator_input, x)
-discriminator.summary()
+def build_discriminator():
+    model = Sequential()
+    dropout = 0.4
+    model.add(layers.Conv2D(64, kernel_size=5, strides=2, input_shape=img_shape, padding="same"))
+    model.add(layers.LeakyReLU(alpha=0.2))
+    model.add(layers.Dropout(dropout))
+    model.add(layers.Conv2D(128, kernel_size=5, strides=2, padding="same"))
+    model.add(layers.ZeroPadding2D(padding=((0, 1), (0, 1))))
+    model.add(layers.BatchNormalization(momentum=0.8))
+    model.add(layers.LeakyReLU(alpha=0.2))
+    model.add(layers.Dropout(dropout))
+    model.add(layers.Conv2D(256, kernel_size=5, strides=2, padding="same"))
+    model.add(layers.BatchNormalization(momentum=0.8))
+    model.add(layers.LeakyReLU(alpha=0.2))
+    model.add(layers.Dropout(dropout))
+    model.add(layers.Conv2D(512, kernel_size=5, strides=1, padding="same"))
+    model.add(layers.BatchNormalization(momentum=0.8))
+    model.add(layers.LeakyReLU(alpha=0.2))
+    model.add(layers.Dropout(dropout))
+    model.add(layers.Flatten())
+    model.add(layers.Dense(1, activation='sigmoid'))
+    model.summary()
+    img = models.Input(shape=img_shape)
+    validity = model(img)
+    return models.Model(img, validity)
 
 
 
-# 为了训练稳定，在优化器中使用学习率衰减和梯度限幅（按值）。
-discriminator_optimizer = keras.optimizers.RMSprop(lr=8e-4, clipvalue=1.0, decay=1e-8)
-discriminator.compile(optimizer=discriminator_optimizer, loss='binary_crossentropy')
-
-
-
-'''
-The adversarial network:对抗网络
-最后，设置GAN，它链接生成器（generator）和鉴别器（discrimitor）。 这是一种模型，经过训练，
-将使生成器（generator）朝着提高其愚弄鉴别器（discrimitor）能力的方向移动。 该模型将潜在的空间点转换为分类决策，
-“假的”或“真实的”，并且意味着使用始终是“这些是真实图像”的标签来训练。 所以训练`gan`将以一种方式更新
-“发生器”的权重，使得“鉴别器”在查看假图像时更可能预测“真实”。 非常重要的是，将鉴别器设置为在训练
-期间被冻结（不可训练）：训练“gan”时其权重不会更新。 如果在此过程中可以更新鉴别器权重，那么将训练鉴别
-器始终预测“真实”。
-'''
-# 将鉴别器（discrimitor）权重设置为不可训练（仅适用于`gan`模型）
+optimizer = keras.optimizers.Adam(lr=0.0004, beta_1=0.5)
+# 对判别器进行构建和编译
+discriminator = build_discriminator()
+discriminator.compile(loss='binary_crossentropy', optimizer=optimizer, metrics=['accuracy'])
+# 对生成器进行构造
+generator = build_generator()
+# 构造对抗模型
+# 总体模型只对生成器进行训练
 discriminator.trainable = False
+input_noise = models.Input(shape=(latent_dim,))
+combined = models.Model(input_noise, discriminator(generator(input_noise)))
+combined.compile(loss='binary_crossentropy', optimizer=optimizer)
 
-gan_input = keras.Input(shape=(latent_dim,))
-gan_output = discriminator(generator(gan_input))
-gan = keras.models.Model(gan_input, gan_output)
-
-gan_optimizer = keras.optimizers.RMSprop(lr=4e-4, clipvalue=1.0, decay=1e-8)
-gan.compile(optimizer=gan_optimizer, loss='binary_crossentropy')
-
-
-
-'''
-  开始训练了。
-  每个epoch：
-   *在潜在空间中绘制随机点（随机噪声）。
-   *使用此随机噪声生成带有“generator”的图像。
-   *将生成的图像与实际图像混合。
-   *使用这些混合图像训练“鉴别器”，使用相应的目标，“真实”（对于真实图像）或“假”（对于生成的图像）。
-   *在潜在空间中绘制新的随机点。
-   *使用这些随机向量训练“gan”，目标都是“这些是真实的图像”。 这将更新发生器的权重（仅因为鉴别器在“gan”内被冻结）
-   以使它们朝向获得鉴别器以预测所生成图像的“这些是真实图像”，即这训练发生器欺骗鉴别器。
-'''
-import os
-from keras.preprocessing import image
-
-# 导入CIFAR10数据集
-(x_train, y_train), (_, _) = keras.datasets.cifar10.load_data()
-
-# 从CIFAR10数据集中选择frog类（class 6）
-x_train = x_train[y_train.flatten() == 6]
-
-# 标准化数据
-x_train = x_train.reshape((x_train.shape[0],) + (height, width, channels)).astype('float32') / 255.
-
-iterations = 10000
-batch_size = 20
+# *************** Load Data
+steps = 1000
+batch_size = 64
+save_interval = 10
 save_dir = '.\\gan_image'
 
-start = 0
-# 开始训练迭代
-for step in range(iterations):
-    # 在潜在空间中抽样随机点
-    random_latent_vectors = np.random.normal(size=(batch_size, latent_dim))
-    # 将随机抽样点解码为假图像
-    generated_images = generator.predict(random_latent_vectors)
-    # 将假图像与真实图像进行比较
-    stop = start + batch_size
-    real_images = x_train[start: stop]
-    combined_images = np.concatenate([generated_images, real_images])
-    # 组装区别真假图像的标签
-    labels = np.concatenate([np.ones((batch_size, 1)),
-                             np.zeros((batch_size, 1))])
-    # 重要的技巧，在标签上添加随机噪声
-    labels += 0.05 * np.random.random(labels.shape)
-    # 训练鉴别器（discrimitor）
-    d_loss = discriminator.train_on_batch(combined_images, labels)
-    # 在潜在空间中采样随机点
-    random_latent_vectors = np.random.normal(size=(batch_size, latent_dim))
-    # 汇集标有“所有真实图像”的标签
-    misleading_targets = np.zeros((batch_size, 1))
-    # 训练生成器（generator）（通过gan模型，鉴别器（discrimitor）权值被冻结）
-    a_loss = gan.train_on_batch(random_latent_vectors, misleading_targets)
-    start += batch_size
-    if start > len(x_train) - batch_size:
-        start = 0
-    if step % 100 == 0:
-        # 保存网络权值
-        gan.save('gan.h5')
-        # 输出metrics
-        print('discriminator loss at step %s: %s' % (step, d_loss))
-        print('adversarial loss at step %s: %s' % (step, a_loss))
+data_dir = r'C:\Users\78753\.keras\data\2faces\96'
+train_datagen = ImageDataGenerator(rescale=1./255)
+train_generator = train_datagen.flow_from_directory(
+    # 目标文件夹
+    data_dir,
+    # 规范化图片大小
+    target_size=img_shape[0:2],
+    batch_size=batch_size)
+
+# 训练
+valid = np.ones((batch_size, 1))
+fake = np.zeros((batch_size, 1))
+for step in range(steps):
+    imgs = next(train_generator)[0]*2-1
+    # 生成一个batch_size的噪声用于生成图片
+    noise = np.random.normal(0, 1, (batch_size, latent_dim))
+    gen_imgs = generator.predict(noise)
+    # 训练判别器
+    d_loss_real = discriminator.train_on_batch(imgs, valid)
+    d_loss_fake = discriminator.train_on_batch(gen_imgs, fake)
+    d_loss = 0.5 * np.add(d_loss_real, d_loss_fake)
+    # 训练生成器
+    g_loss = combined.train_on_batch(noise, valid)
+    print("%d [D loss: %f, acc.: %.2f%%] [G loss: %f]" % (step, d_loss[0], 100 * d_loss[1], g_loss))
+    if step % save_interval == 0:
+        combined.save('gan.h5')
         # 保存生成的图像
-        img = image.array_to_img(generated_images[0] * 255., scale=False)
-        img.save(os.path.join(save_dir, 'generated_frog' + str(step) + '.png'))
+        img = image.array_to_img(gen_imgs[0] * 127 + 127., scale=False)
+        img.save(os.path.join(save_dir, 'generated_' + str(step) + '.png'))
         # 保存真实图像，以便进行比较
-        img = image.array_to_img(real_images[0] * 255., scale=False)
-        img.save(os.path.join(save_dir, 'real_frog' + str(step) + '.png'))
-
-
-# 绘图
-import matplotlib.pyplot as plt
-
-# 在潜在空间中抽样随机点
-random_latent_vectors = np.random.normal(size=(10, latent_dim))
-
-# 将随机抽样点解码为假图像
-generated_images = generator.predict(random_latent_vectors)
-
-for i in range(generated_images.shape[0]):
-    img = image.array_to_img(generated_images[i] * 255., scale=False)
-    plt.figure()
-    plt.imshow(img)
-
-plt.show()
-
+        img = image.array_to_img(imgs[0] * 127 + 127., scale=False)
+        img.save(os.path.join(save_dir, 'real_' + str(step) + '.png'))
