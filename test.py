@@ -1,154 +1,186 @@
-import msvcrt
-import os
-import tensorflow as tf
-from keras import backend as K
-import keras.backend.tensorflow_backend as KTF
-from keras.preprocessing import image
-from keras.preprocessing.image import ImageDataGenerator
-import keras
-from keras import layers, Sequential, models
+#! -*- coding: utf-8 -*-
+# wgan-div
+
 import numpy as np
-
-# 手动分配GPU
-config = tf.ConfigProto()
-config.gpu_options.allow_growth = True  # 不全部占满显存, 按需分配
-# config.gpu_options.per_process_gpu_memory_fraction = 0.5  # 指定分配50%空间
-sess = tf.Session(config=config)  # 设置session
-KTF.set_session(sess)
-
-# IO参数
-latent_dim = 100
-img_shape = (96, 96, 3)
+from scipy import misc
+import glob
+import imageio
+from keras.models import Model
+from keras.layers import *
+from keras import backend as K
+from keras.initializers import RandomNormal
+from keras.optimizers import Adam
+import os
 
 
-# ************************** 生成器
-def build_generator():
-    model = Sequential()
-    model.add(layers.Dense(512 * 6 * 6, activation='relu', input_dim=latent_dim))  # 输入维度为100
-    model.add(layers.Reshape((6, 6, 512)))
-    model.add(layers.UpSampling2D())  # 进行上采样，变成14*14*128
-    model.add(layers.Conv2D(256, kernel_size=5, padding='same'))
-    model.add(layers.BatchNormalization(momentum=0.8))
-    model.add(layers.Activation("relu"))  #
-    model.add(layers.UpSampling2D())
-    model.add(layers.Conv2D(128, kernel_size=5, padding="same"))
-    model.add(layers.BatchNormalization(momentum=0.8))
-    model.add(layers.Activation("relu"))
-    model.add(layers.UpSampling2D())
-    model.add(layers.Conv2D(64, kernel_size=5, padding="same"))
-    model.add(layers.BatchNormalization(momentum=0.8))
-    model.add(layers.Activation("relu"))
-    model.add(layers.UpSampling2D())
-    model.add(layers.Conv2D(img_shape[-1], kernel_size=5, padding="same"))
-    model.add(layers.Activation("tanh"))
-    model.summary()  # 打印网络参数
-    noise = models.Input(shape=(latent_dim,))
-    img = model(noise)
-    return models.Model(noise, img)  # 定义一个 一个输入noise一个输出img的模型
+if not os.path.exists('samples'):
+    os.mkdir('samples')
+
+imgs = glob.glob('../CelebA-HQ/train/*.png')
+np.random.shuffle(imgs)
+img_dim = 128
+z_dim = 128
+num_layers = int(np.log2(img_dim)) - 3
+max_num_channels = img_dim * 8
+f_size = img_dim // 2**(num_layers + 1)
+batch_size = 64
 
 
-# ************************** 判别器
-def build_discriminator():
-    model = Sequential()
-    dropout = 0.4
-    model.add(layers.Conv2D(64, kernel_size=5, strides=2, input_shape=img_shape, padding="same"))
-    model.add(layers.LeakyReLU(alpha=0.2))
-    model.add(layers.Dropout(dropout))
-    model.add(layers.Conv2D(128, kernel_size=5, strides=2, padding="same"))
-    model.add(layers.ZeroPadding2D(padding=((0, 1), (0, 1))))
-    model.add(layers.BatchNormalization(momentum=0.8))
-    model.add(layers.LeakyReLU(alpha=0.2))
-    model.add(layers.Dropout(dropout))
-    model.add(layers.Conv2D(256, kernel_size=5, strides=2, padding="same"))
-    model.add(layers.BatchNormalization(momentum=0.8))
-    model.add(layers.LeakyReLU(alpha=0.2))
-    model.add(layers.Dropout(dropout))
-    model.add(layers.Conv2D(512, kernel_size=5, strides=1, padding="same"))
-    model.add(layers.BatchNormalization(momentum=0.8))
-    model.add(layers.LeakyReLU(alpha=0.2))
-    model.add(layers.Dropout(dropout))
-    model.add(layers.Flatten())
-    model.add(layers.Dense(1, activation='sigmoid'))
-    model.summary()
-    img = models.Input(shape=img_shape)
-    validity = model(img)
-    return models.Model(img, validity)
+def imread(f):
+    x = misc.imread(f, mode='RGB')
+    x = misc.imresize(x, (img_dim, img_dim))
+    return x.astype(np.float32) / 255 * 2 - 1
 
 
-def load_dir_img(sorcedir):
-    print('正在读取图片...')
-    files = os.listdir(sorcedir)
-    data = []
-    for f in files:
-        arr = image.img_to_array(image.load_img(os.path.join(sorcedir, f)))
-        data.append(arr)
-    return np.array(data) / 127.5 - 1
+def data_generator(batch_size=64):
+    X = []
+    while True:
+        np.random.shuffle(imgs)
+        for f in imgs:
+            X.append(imread(f))
+            if len(X) == batch_size:
+                X = np.array(X)
+                yield X
+                X = []
 
 
-# ************************** 建模
-optimizer = keras.optimizers.Adam(lr=0.0002, beta_1=0.5)
-# 对判别器进行构建和编译
-discriminator = build_discriminator()
-discriminator.compile(loss='binary_crossentropy', optimizer=optimizer, metrics=['accuracy'])
-# 对生成器进行构造
-generator = build_generator()
-# 构造对抗模型
-# 总体模型只对生成器进行训练
-discriminator.trainable = False
-input_noise = models.Input(shape=(latent_dim,))
-combined = models.Model(input_noise, discriminator(generator(input_noise)))
-combined.compile(loss='binary_crossentropy', optimizer=optimizer)
+# 判别器
+x_in = Input(shape=(img_dim, img_dim, 3))
+x = x_in
 
-# ************************** Load Data
-# 数据来源:https://drive.google.com/drive/folders/1mCsY5LEsgCnc0Txv0rpAUhKVPWVkbw5I?usp=sharing
-x = load_dir_img(r'C:\Users\78753\.keras\data\2faces\96\faces')
+for i in range(num_layers + 1):
+    num_channels = max_num_channels // 2**(num_layers - i)
+    x = Conv2D(num_channels,
+               (5, 5),
+               strides=(2, 2),
+               use_bias=False,
+               padding='same',
+               kernel_initializer=RandomNormal(stddev=0.02))(x)
+    if i > 0:
+        x = BatchNormalization()(x)
+    x = LeakyReLU(0.2)(x)
 
+x = GlobalAveragePooling2D()(x)
+x = Dense(1, use_bias=False)(x)
 
-# ************************** 训练
-def run(epochs=10, batch_size=64, gdrate=2, save_interval=10, save_dir='.\\gan_image'):
-    valid = np.ones((batch_size, 1))
-    fake = np.zeros((batch_size, 1))
-    for epoch in range(epochs):
-        for step in range(x.shape[0] // batch_size):
-            # 按q终止
-            while msvcrt.kbhit():
-                char = ord(msvcrt.getch())
-                if char == 113:
-                    return
-            g_loss = -1
-            # 训练判别器
-            imgs = x[step * batch_size:step * batch_size + batch_size]
-            noise = np.random.normal(0, 1, (batch_size, latent_dim))
-            gen_imgs = generator.predict(noise)
-            d_loss_real = discriminator.train_on_batch(imgs, valid)
-            d_loss_fake = discriminator.train_on_batch(gen_imgs, fake)
-            d_loss = 0.5 * np.add(d_loss_real, d_loss_fake)
-            # 训练生成器(动态训练比例)
-            for i in range(1 + int(gdrate * d_loss[1] * 2)):
-                noise = np.random.normal(0, 1, (batch_size, latent_dim))
-                g_loss = combined.train_on_batch(noise, valid)
-            # Log
-            if step % save_interval == 0:
-                print(
-                    "%d:%d [D loss: %f, acc.: %.2f%%] [G loss: %f]" % (epoch, step, d_loss[0], 100 * d_loss[1], g_loss))
-                combined.save('gan.h5')
-                # 保存生成的图像
-                img = image.array_to_img(gen_imgs[0] * 127 + 127., scale=False)
-                img.save(os.path.join(save_dir, 'generated_' + str(epoch) + '_' + str(step) + '.png'))
-                # 保存真实图像，以便进行比较
-                # img = image.array_to_img(imgs[0] * 127 + 127., scale=False)
-                # img.save(os.path.join(save_dir, 'real_' + str(epoch) + '_' + str(step) + '.png'))
-    combined.save('gan.h5')
+d_model = Model(x_in, x)
+d_model.summary()
 
 
-# ************************** 生成
-def generate(generator, num=10, save_dir=r'gan_image'):
-    noise = np.random.normal(0, 1, (num, K.int_shape(generator.layers[0].input)[1]))
-    gen_imgs = generator.predict(noise)
-    for i in range(gen_imgs.shape[0]):
-        img = image.array_to_img(gen_imgs[i] * 127 + 127., scale=False)
-        img.save(os.path.join(save_dir, 'generated_' + str(i) + '.png'))
+# 生成器
+z_in = Input(shape=(z_dim, ))
+z = z_in
+
+z = Dense(f_size**2 * max_num_channels,
+          kernel_initializer=RandomNormal(stddev=0.02))(z)
+z = BatchNormalization()(z)
+z = Activation('relu')(z)
+z = Reshape((f_size, f_size, max_num_channels))(z)
+
+for i in range(num_layers):
+    num_channels = max_num_channels // 2**(i + 1)
+    z = Conv2DTranspose(num_channels,
+                        (5, 5),
+                        strides=(2, 2),
+                        padding='same',
+                        kernel_initializer=RandomNormal(stddev=0.02))(z)
+    z = BatchNormalization()(z)
+    z = Activation('relu')(z)
+
+z = Conv2DTranspose(3,
+                    (5, 5),
+                    strides=(2, 2),
+                    padding='same',
+                    kernel_initializer=RandomNormal(stddev=0.02))(z)
+z = Activation('tanh')(z)
+
+g_model = Model(z_in, z)
+g_model.summary()
 
 
-# ************************** 运行
-run()
+# 整合模型（训练判别器）
+x_in = Input(shape=(img_dim, img_dim, 3))
+z_in = Input(shape=(z_dim, ))
+g_model.trainable = False
+
+x_real = x_in
+x_fake = g_model(z_in)
+
+x_real_score = d_model(x_real)
+x_fake_score = d_model(x_fake)
+
+d_train_model = Model([x_in, z_in],
+                      [x_real_score, x_fake_score])
+
+
+k = 2
+p = 6
+d_loss = K.mean(x_real_score - x_fake_score)
+
+real_grad = K.gradients(x_real_score, [x_real])[0]
+fake_grad = K.gradients(x_fake_score, [x_fake])[0]
+
+real_grad_norm = K.sum(real_grad**2, axis=[1, 2, 3])**(p / 2)
+fake_grad_norm = K.sum(fake_grad**2, axis=[1, 2, 3])**(p / 2)
+grad_loss = K.mean(real_grad_norm + fake_grad_norm) * k / 2
+
+w_dist = K.mean(x_fake_score - x_real_score)
+
+d_train_model.add_loss(d_loss + grad_loss)
+d_train_model.compile(optimizer=Adam(2e-4, 0.5))
+d_train_model.metrics_names.append('w_dist')
+d_train_model.metrics_tensors.append(w_dist)
+
+
+# 整合模型（训练生成器）
+g_model.trainable = True
+d_model.trainable = False
+
+x_fake = g_model(z_in)
+x_fake_score = d_model(x_fake)
+
+g_train_model = Model(z_in, x_fake_score)
+
+g_loss = K.mean(x_fake_score)
+g_train_model.add_loss(g_loss)
+g_train_model.compile(optimizer=Adam(2e-4, 0.5))
+
+
+# 检查模型结构
+d_train_model.summary()
+g_train_model.summary()
+
+
+# 采样函数
+def sample(path):
+    n = 9
+    figure = np.zeros((img_dim * n, img_dim * n, 3))
+    for i in range(n):
+        for j in range(n):
+            z_sample = np.random.randn(1, z_dim)
+            x_sample = g_model.predict(z_sample)
+            digit = x_sample[0]
+            figure[i * img_dim:(i + 1) * img_dim,
+                   j * img_dim:(j + 1) * img_dim] = digit
+    figure = (figure + 1) / 2 * 255
+    figure = np.round(figure, 0).astype(int)
+    imageio.imwrite(path, figure)
+
+
+iters_per_sample = 100
+total_iter = 1000000
+img_generator = data_generator(batch_size)
+
+for i in range(total_iter):
+    for j in range(1):
+        z_sample = np.random.randn(batch_size, z_dim)
+        d_loss = d_train_model.train_on_batch(
+            [img_generator.next(), z_sample], None)
+    for j in range(1):
+        z_sample = np.random.randn(batch_size, z_dim)
+        g_loss = g_train_model.train_on_batch(z_sample, None)
+    if i % 10 == 0:
+        print('iter: %s, d_loss: %s, g_loss: %s' % (i, d_loss, g_loss))
+    if i % iters_per_sample == 0:
+        sample('samples/test_%s.png' % i)
+        g_train_model.save_weights('./g_train_model.weights')

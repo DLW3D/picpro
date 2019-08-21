@@ -1,5 +1,7 @@
 import msvcrt
 import os
+import time
+
 import tensorflow as tf
 from keras import backend as K
 import keras.backend.tensorflow_backend as KTF
@@ -71,14 +73,14 @@ def build_discriminator():
     return models.Model(img, validity)
 
 
+# 从文件夹加载图片数据
 def load_dir_img(sorcedir):
     print('正在读取图片...')
     files = os.listdir(sorcedir)
-    data = []
-    for f in files:
-        arr = image.img_to_array(image.load_img(os.path.join(sorcedir, f)))
-        data.append(arr)
-    return np.array(data) / 127.5 - 1
+    data = np.zeros((files.__len__(),) + image.img_to_array(image.load_img(os.path.join(sorcedir, files[0]))).shape)
+    for i in range(files.__len__()):
+        data[i] = image.img_to_array(image.load_img(os.path.join(sorcedir, files[i]))) / 127.5 - 1
+    return data
 
 
 # ************************** 建模
@@ -97,15 +99,23 @@ combined.compile(loss='binary_crossentropy', optimizer=optimizer)
 
 # ************************** Load Data
 # 数据来源:https://drive.google.com/drive/folders/1mCsY5LEsgCnc0Txv0rpAUhKVPWVkbw5I?usp=sharing
-x = load_dir_img(r'C:\Users\78753\.keras\data\2faces\96\faces')
-
-
+# x = load_dir_img(r'C:\dataset\faces3m96')
+print('正在加载数据')
+x = np.load(r'C:\Users\78753\Desktop\DL\picpro\faces5m96.npy')
 # ************************** 训练
 """
     gdrate:额外的生成器训练比率
     save_interval:保存间隔(steap)
 """
-def run(epochs=10, batch_size=64, gdrate=2, save_interval=100, save_dir='.\\gan_image'):
+
+
+def run(epochs=100, batch_size=256, gdrate=2, save_interval=50, save_dir='.\\gan_image', history=None):
+    last_time = time.clock()
+    start_epoch = 0
+    if history is None:
+        history = []
+    else:
+        start_epoch = history[-1][0]
     valid = np.ones((batch_size, 1))
     fake = np.zeros((batch_size, 1))
     for epoch in range(epochs):
@@ -114,7 +124,7 @@ def run(epochs=10, batch_size=64, gdrate=2, save_interval=100, save_dir='.\\gan_
             while msvcrt.kbhit():
                 char = ord(msvcrt.getch())
                 if char == 113:
-                    return
+                    return history
             g_loss = -1
             # 训练判别器
             imgs = x[step * batch_size:step * batch_size + batch_size]
@@ -130,15 +140,20 @@ def run(epochs=10, batch_size=64, gdrate=2, save_interval=100, save_dir='.\\gan_
             # Log
             if step % save_interval == 0:
                 print(
-                    "%d:%d [D loss: %f, acc.: %.2f%%] [G loss: %f]" % (epoch, step, d_loss[0], 100 * d_loss[1], g_loss))
+                    "%d:%d [D loss: %f, acc.: %.2f%%] [G loss: %f]" % (epoch+start_epoch, step, d_loss[0], 100 * d_loss[1], g_loss))
+                history.append((epoch+start_epoch, step, d_loss[0], 100 * d_loss[1], g_loss))
                 combined.save('gan.h5')
                 # 保存生成的图像
                 img = image.array_to_img(gen_imgs[0] * 127 + 127., scale=False)
-                img.save(os.path.join(save_dir, 'generated_' + str(epoch+10) + '_' + str(step) + '.png'))
+                img.save(os.path.join(save_dir, 'generated_' + str(epoch+start_epoch) + '_' + str(step) + '.png'))
                 # 保存真实图像，以便进行比较
                 # img = image.array_to_img(imgs[0] * 127 + 127., scale=False)
-                # img.save(os.path.join(save_dir, 'real_' + str(epoch) + '_' + str(step) + '.png'))
+                # img.save(os.path.join(save_dir, 'real_' + str(epoch+start_epoch) + '_' + str(step) + '.png'))
+        # 计时
+        print('epoch run %d s, total run %d s' % (time.clock() - last_time, time.clock()))
+        last_time = time.clock()
     combined.save('gan.h5')
+    return history
 
 
 # ************************** 生成
