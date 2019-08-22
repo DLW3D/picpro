@@ -53,7 +53,6 @@ def build_discriminator():
     model.add(layers.LeakyReLU(alpha=0.2))
     model.add(layers.Dropout(dropout))
     model.add(layers.Conv2D(128, kernel_size=5, strides=2, padding="same"))
-    # model.add(layers.ZeroPadding2D(padding=((0, 1), (0, 1))))
     model.add(layers.BatchNormalization(momentum=0.8))
     model.add(layers.LeakyReLU(alpha=0.2))
     model.add(layers.Dropout(dropout))
@@ -104,12 +103,10 @@ print('正在加载数据')
 x = np.load(r'C:\Users\78753\Desktop\DL\picpro\faces5m96.npy')
 # ************************** 训练
 """
-    gdrate:额外的生成器训练比率
+    gdrate:额外的生成器训练比率(判别器50%额外训练0次,100%额外训练gdrate次)
     save_interval:保存间隔(steap)
 """
-
-
-def run(epochs=100, batch_size=256, gdrate=2, save_interval=50, save_dir='.\\gan_image', history=None):
+def run(epochs=100, batch_size=128, save_interval=100, gdrate=3, save_dir='.\\gan_image', history=None):
     last_time = time.clock()
     start_epoch = 0
     if history is None:
@@ -134,7 +131,7 @@ def run(epochs=100, batch_size=256, gdrate=2, save_interval=50, save_dir='.\\gan
             d_loss_fake = discriminator.train_on_batch(gen_imgs, fake)
             d_loss = 0.5 * np.add(d_loss_real, d_loss_fake)
             # 训练生成器(动态训练比例)
-            for i in range(1 + int(gdrate * d_loss[1] * 2)):
+            for i in range(1 + int(gdrate * np.maximum(d_loss[1] - .5, 0) * 2)):
                 noise = np.random.normal(0, 1, (batch_size, latent_dim))
                 g_loss = combined.train_on_batch(noise, valid)
             # Log
@@ -145,7 +142,7 @@ def run(epochs=100, batch_size=256, gdrate=2, save_interval=50, save_dir='.\\gan
                 combined.save('gan.h5')
                 # 保存生成的图像
                 img = image.array_to_img(gen_imgs[0] * 127 + 127., scale=False)
-                img.save(os.path.join(save_dir, 'generated_' + str(epoch+start_epoch) + '_' + str(step) + '.png'))
+                img.save(os.path.join(save_dir, 'train_' + str(epoch+start_epoch) + '_' + str(step) + '.png'))
                 # 保存真实图像，以便进行比较
                 # img = image.array_to_img(imgs[0] * 127 + 127., scale=False)
                 # img.save(os.path.join(save_dir, 'real_' + str(epoch+start_epoch) + '_' + str(step) + '.png'))
@@ -157,7 +154,7 @@ def run(epochs=100, batch_size=256, gdrate=2, save_interval=50, save_dir='.\\gan
 
 
 # ************************** 生成
-def generate(generator, num=10, save_dir=r'gan_image'):
+def generate(generator, num=100, save_dir=r'gan_image'):
     noise = np.random.normal(0, 1, (num, K.int_shape(generator.layers[0].input)[1]))
     gen_imgs = generator.predict(noise)
     for i in range(gen_imgs.shape[0]):
@@ -166,4 +163,4 @@ def generate(generator, num=10, save_dir=r'gan_image'):
 
 
 # ************************** 运行
-run()
+history = run()
