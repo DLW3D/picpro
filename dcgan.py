@@ -82,25 +82,6 @@ def load_dir_img(sorcedir):
     return data
 
 
-# ************************** 建模
-optimizer = keras.optimizers.Adam(lr=0.0002, beta_1=0.5)
-# 对判别器进行构建和编译
-discriminator = build_discriminator()
-discriminator.compile(loss='binary_crossentropy', optimizer=optimizer, metrics=['accuracy'])
-# 对生成器进行构造
-generator = build_generator()
-# 构造对抗模型
-# 总体模型只对生成器进行训练
-discriminator.trainable = False
-input_noise = models.Input(shape=(latent_dim,))
-combined = models.Model(input_noise, discriminator(generator(input_noise)))
-combined.compile(loss='binary_crossentropy', optimizer=optimizer)
-
-# ************************** Load Data
-# 数据来源:https://drive.google.com/drive/folders/1mCsY5LEsgCnc0Txv0rpAUhKVPWVkbw5I?usp=sharing
-# x = load_dir_img(r'C:\dataset\faces3m96')
-print('正在加载数据')
-x = np.load(r'C:\Users\78753\Desktop\DL\picpro\faces5m96.npy')
 # ************************** 训练
 """
     gdrate:额外的生成器训练比率(判别器50%额外训练0次,100%额外训练gdrate次)
@@ -112,7 +93,7 @@ def run(epochs=100, batch_size=128, save_interval=100, gdrate=3, save_dir='.\\ga
     if history is None:
         history = []
     else:
-        start_epoch = history[-1][0]
+        start_epoch = int(history[-1][0])
     valid = np.ones((batch_size, 1))
     fake = np.zeros((batch_size, 1))
     for epoch in range(epochs):
@@ -138,7 +119,7 @@ def run(epochs=100, batch_size=128, save_interval=100, gdrate=3, save_dir='.\\ga
             if step % save_interval == 0:
                 print(
                     "%d:%d [D loss: %f, acc.: %.2f%%] [G loss: %f]" % (epoch+start_epoch, step, d_loss[0], 100 * d_loss[1], g_loss))
-                history.append((epoch+start_epoch, step, d_loss[0], 100 * d_loss[1], g_loss))
+                history.append([epoch+start_epoch, step, d_loss[0], 100 * d_loss[1], g_loss])
                 combined.save('gan.h5')
                 # 保存生成的图像
                 img = image.array_to_img(gen_imgs[0] * 127 + 127., scale=False)
@@ -161,6 +142,49 @@ def generate(generator, num=100, save_dir=r'gan_image'):
         img = image.array_to_img(gen_imgs[i] * 127 + 127., scale=False)
         img.save(os.path.join(save_dir, 'generated_' + str(i) + '.png'))
 
+# ************************** 中途保存
+def save(folder):
+    combined.save(os.path.join(folder, 'gan.h5'))
+    generator.save(os.path.join(folder, 'gan_g.h5'))
+    discriminator.save(os.path.join(folder, 'gan_d.h5'))
+    np.save(os.path.join(folder, 'history.npy'), history)
+
+def load(folder):
+    history = np.load(os.path.join(folder, 'history.npy')).tolist()
+    generator = models.load_model(os.path.join(folder, 'gan_g.h5'))
+    discriminator = models.load_model(os.path.join(folder, 'gan_d.h5'))
+    discriminator.trainable = False
+    input_noise = models.Input(shape=(latent_dim,))
+    optimizer = keras.optimizers.Adam(lr=0.0002, beta_1=0.5)
+    combined = models.Model(input_noise, discriminator(generator(input_noise)))
+    combined.compile(loss='binary_crossentropy', optimizer=optimizer)
+    return history, generator, discriminator, combined
+
+
+# ************************** Load Data
+# 数据来源:https://drive.google.com/drive/folders/1mCsY5LEsgCnc0Txv0rpAUhKVPWVkbw5I?usp=sharing
+# x = load_dir_img(r'C:\dataset\faces3m96')
+print('正在加载数据')
+x = np.load(r'C:\Users\78753\Desktop\DL\picpro\faces5m96.npy')
+
+
+# ************************** 建模
+optimizer = keras.optimizers.Adam(lr=0.0002, beta_1=0.5)
+# 对判别器进行构建和编译
+discriminator = build_discriminator()
+discriminator.compile(loss='binary_crossentropy', optimizer=optimizer, metrics=['accuracy'])
+# 对生成器进行构造
+generator = build_generator()
+# 构造对抗模型
+# 总体模型只对生成器进行训练
+discriminator.trainable = False
+input_noise = models.Input(shape=(latent_dim,))
+combined = models.Model(input_noise, discriminator(generator(input_noise)))
+combined.compile(loss='binary_crossentropy', optimizer=optimizer)
+
 
 # ************************** 运行
 history = run()
+
+# history, generator, discriminator, combined=load(r'C:\Users\78753\Desktop\DL\picpro\moegirlgandone52g+')
+# history = run(history=history)
