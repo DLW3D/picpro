@@ -10,6 +10,7 @@ from keras.preprocessing.image import ImageDataGenerator
 import keras
 from keras import layers, Sequential, models
 import numpy as np
+import matplotlib.pyplot as plt
 
 # 手动分配GPU
 config = tf.ConfigProto()
@@ -124,9 +125,7 @@ def run(epochs=100, batch_size=128, save_interval=100, gdrate=3, save_dir='.\\ga
                 print(
                     "%d:%d [D loss: %f, acc.: %.2f%%] [G loss: %f]" % (epoch+start_epoch, step, d_loss[0], 100 * d_loss[1], g_loss))
                 history.append([epoch+start_epoch, step, d_loss[0], 100 * d_loss[1], g_loss])
-                combined.save('gan.h5')
-                generator.save('gan_g.h5')
-                discriminator.save('gan_d.h5')
+                save('.\\')
                 # 保存生成的图像
                 img = image.array_to_img(gen_imgs[0] * 127 + 127., scale=False)
                 img.save(os.path.join(save_dir, 'train_' + str(epoch+start_epoch) + '_' + str(step) + '.png'))
@@ -136,19 +135,23 @@ def run(epochs=100, batch_size=128, save_interval=100, gdrate=3, save_dir='.\\ga
         # 计时
         print('epoch run %d s, total run %d s' % (time.clock() - last_time, time.clock()))
         last_time = time.clock()
-    combined.save('gan.h5')
-    generator.save('gan_g.h5')
-    discriminator.save('gan_d.h5')
+    save('.\\')
     return history
 
 
 # ************************** 生成
-def generate(generator, num=100, save_dir=r'gan_image'):
+def generate(generator, save_dir=r'gan_image', num=100):
     noise = np.random.normal(0, 1, (num, K.int_shape(generator.layers[0].input)[1]))
     gen_imgs = generator.predict(noise)
     for i in range(gen_imgs.shape[0]):
         img = image.array_to_img(gen_imgs[i] * 127 + 127., scale=False)
         img.save(os.path.join(save_dir, 'generated_' + str(i) + '.png'))
+
+def plot_history():
+    h = np.array(history)
+    plt.scatter(h[:,0], h[:,3])
+    plt.show()
+
 
 # ************************** 中途保存
 def save(folder):
@@ -192,5 +195,6 @@ combined.compile(loss='binary_crossentropy', optimizer=optimizer)
 # ************************** 运行
 history = run()
 
+# 从断点开始训练
 # history, generator, discriminator, combined=load(r'C:\Users\78753\Desktop\DL\picpro\moegirlgandone52g+')
 # history = run(history=history)
